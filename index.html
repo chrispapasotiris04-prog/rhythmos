@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ρυθμός</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="app-version" content="1.2.10">
+<meta name="app-version" content="1.2.11">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -762,7 +762,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'️',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.2.10';
+var APP_VERSION='1.2.11';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -988,6 +988,15 @@ else if(tr.kind==='noise'){if(!AUD_WAV[tr.id]){AUD_WAV[tr.id]=URL.createObjectUR
 else if(tr.kind==='local'){audGet(tr.key).then(function(b){if(!b){showToast('Αρχείο δεν βρέθηκε.');a.playing=false;audInject();return;}finish(URL.createObjectURL(b));});}
 else{finish(tr.url);}
 saveState();audInject();};
+</script>
+
+<script>
+(function(){var a=state.audio;if(!a)return;
+var fix={'rain-file':{url:'forest.mp3',name:'Δάσος (ηχογράφηση)'},'gymnopedie':{url:'satie.mp3',name:'Gymnopédie No. 1 — Satie'},'ambient1':{url:'ambient.mp3',name:'Calm Ambient'}};
+a.categories.forEach(function(c){c.tracks.forEach(function(t){if(fix[t.id]){t.url=fix[t.id].url;t.name=fix[t.id].name;t.kind='file';}});});
+var ensure=[{cat:'nature',name:'Φύση',t:{id:'rain-file',name:'Δάσος (ηχογράφηση)',kind:'file',url:'forest.mp3'}},{cat:'classical',name:'Κλασική',t:{id:'gymnopedie',name:'Gymnopédie No. 1 — Satie',kind:'file',url:'satie.mp3'}},{cat:'ambient',name:'Ambient',t:{id:'ambient1',name:'Calm Ambient',kind:'file',url:'ambient.mp3'}}];
+ensure.forEach(function(e){var c=a.categories.find(function(x){return x.id===e.cat;});if(!c){c={id:e.cat,name:e.name,builtin:true,tracks:[]};a.categories.push(c);}c.name=e.name;c.builtin=true;if(!c.tracks.find(function(x){return x.id===e.t.id;}))c.tracks.push(e.t);});
+saveState();})();
 </script>
   
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
