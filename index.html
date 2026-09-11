@@ -952,6 +952,7 @@ var _ss=safeSettings;safeSettings=function(){_ss();var p=document.getElementById
 var _rac=renderActivities;renderActivities=function(){return _rac()+'<div class="section-title">Εξεταστική</div><div class="card">'+state.courses.filter(function(c){return c.active&&c.hours>0;}).map(function(c){return '<div class="list-row"><div class="list-left"><strong>'+esc(c.name)+'</strong></div><input type="date" style="width:auto" value="'+(c.examDate||'')+'" onchange="setExam(\''+c.id+'\',this.value)"></div>';}).join('')+'</div>';};
 function setExam(id,v){var c=state.courses.find(function(x){return x.id===id});if(!c)return;c.examDate=v;saveState();render();}
 var _ci=courseInfo;courseInfo=function(c){var r=_ci(c);if(c&&c.examDate&&r.remaining>0){var exS=startOfDay(new Date(c.examDate+'T12:00:00').getTime());var daysLeft=Math.round((exS-startOfDay())/86400000);if(daysLeft>=0&&daysLeft<=21){var act=0;for(var i=0;i<=daysLeft;i++){var wd=mondayIndex(startOfDay()+i*86400000);if(!(c.off||[]).includes(wd))act++;}var urg=1+0.5*(1-daysLeft/21);r.todayTarget=Math.min(r.remaining,Math.max(r.todayTarget,(r.remaining/Math.max(1,act))*urg));}}return r;};
+render();
 </script>
   
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
