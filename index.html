@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ρυθμός</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="app-version" content="1.2.14">
+<meta name="app-version" content="1.2.15">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -762,7 +762,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'️',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.2.14';
+var APP_VERSION='1.2.15';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -815,6 +815,11 @@ setTimeout(function(){try{if(navigator.serviceWorker&&navigator.serviceWorker.co
 .aud-cat strong{flex:1;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aud-cat span{font-size:.72rem;color:var(--muted)}
 #focusOverlay .aud-float{position:absolute;top:18px;right:18px}
+#modalOverlay{z-index:160}
+.aud-fab{position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:65;width:46px;height:46px;border-radius:16px;border:1px solid var(--card-border);background:var(--card);color:var(--primary);display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 20px rgba(35,47,95,.18)}
+.aud-fab.playing{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border-color:transparent}
+.aud-fab svg{width:22px;height:22px}
+#focusOverlay .aud-stop{position:absolute;top:18px;right:64px}
 </style>
 <script>
 if(!state.audio)state.audio={categories:[],volume:.7,loop:true,curCat:null,curTrack:null,playing:false};
@@ -824,95 +829,57 @@ function audDB(){if(AUD_DBP)return AUD_DBP;AUD_DBP=new Promise(function(res,rej)
 function audPut(k,b){return audDB().then(function(db){return new Promise(function(res,rej){var t=db.transaction('blobs','readwrite');t.objectStore('blobs').put(b,k);t.oncomplete=res;t.onerror=rej;});});}
 function audGet(k){return audDB().then(function(db){return new Promise(function(res,rej){var t=db.transaction('blobs','readonly');var q=t.objectStore('blobs').get(k);q.onsuccess=function(){res(q.result);};q.onerror=rej;});});}
 function audDel(k){return audDB().then(function(db){return new Promise(function(res,rej){var t=db.transaction('blobs','readwrite');t.objectStore('blobs').delete(k);t.oncomplete=res;t.onerror=rej;});});}
-var AUD_CTX=null,AUD_NS=null,AUD_NG=null;
-function noiseStart(){AUD_CTX=AUD_CTX||new (window.AudioContext||window.webkitAudioContext)();if(AUD_CTX.state==='suspended')AUD_CTX.resume();var n=2*AUD_CTX.sampleRate;var buf=AUD_CTX.createBuffer(1,n,AUD_CTX.sampleRate);var d=buf.getChannelData(0);var l=0;for(var i=0;i<n;i++){var w=Math.random()*2-1;l=(l+0.02*w)/1.02;d[i]=l*3.5;}AUD_NS=AUD_CTX.createBufferSource();AUD_NS.buffer=buf;AUD_NS.loop=true;AUD_NG=AUD_CTX.createGain();AUD_NG.gain.value=state.audio.volume;AUD_NS.connect(AUD_NG);AUD_NG.connect(AUD_CTX.destination);AUD_NS.start();}
-function noiseStop(){if(AUD_NS){try{AUD_NS.stop();}catch(e){}AUD_NS=null;AUD_NG=null;}}
-function audSetVol(v){state.audio.volume=v;AUD_EL.volume=v;if(AUD_NG)AUD_NG.gain.value=v;saveState();}
+function audSetVol(v){state.audio.volume=v;AUD_EL.volume=v;saveState();}
 function audFindTrack(){var a=state.audio;if(!a.curCat||!a.curTrack)return null;var c=a.categories.find(function(x){return x.id===a.curCat;});if(!c)return null;return c.tracks.find(function(x){return x.id===a.curTrack;})||null;}
-function audPlayTrack(catId,tr){var a=state.audio;a.curCat=catId;a.curTrack=tr.id;a.playing=true;noiseStop();AUD_EL.pause();if(tr.kind==='noise'){noiseStart();}else if(tr.kind==='local'){audGet(tr.key).then(function(b){if(!b){showToast('Το αρχείο δεν βρέθηκε στη συσκευή.');a.playing=false;return;}AUD_EL.src=URL.createObjectURL(b);AUD_EL.volume=a.volume;AUD_EL.loop=a.loop;AUD_EL.play().catch(function(){showToast('Αποτυχία αναπαραγωγής.');});});}else{AUD_EL.src=tr.url;AUD_EL.volume=a.volume;AUD_EL.loop=a.loop;AUD_EL.play().catch(function(){showToast('Αποτυχία αναπαραγωγής.');});}saveState();}
 function audToggle(){var a=state.audio;if(!a.playing){var t=audFindTrack();if(t)audPlayTrack(a.curCat,t);else if(a.categories.length&&a.categories[0].tracks.length)audPlayTrack(a.categories[0].id,a.categories[0].tracks[0]);else openAudioSheet();}else{a.playing=false;noiseStop();AUD_EL.pause();saveState();}}
 function audNext(){var a=state.audio;var c=a.categories.find(function(x){return x.id===a.curCat;});if(!c||!c.tracks.length)return;var i=c.tracks.findIndex(function(x){return x.id===a.curTrack;});audPlayTrack(c.id,c.tracks[(i+1)%c.tracks.length]);}
-function ensureBuiltin(){var a=state.audio;if(!a.categories.find(function(c){return c.id==='noise';})){a.categories.unshift({id:'noise',name:'Θόρυβοι',builtin:true,tracks:[{id:'brown',name:'Καφέ θόρυβος',kind:'noise'}]});saveState();}}
-ensureBuiltin();
-</script>
-
-<script>
-var _ufo=updateFocusOverlay;
-updateFocusOverlay=function(f){_ufo(f);audInject();};
-function audInject(){var ov=document.getElementById('focusOverlay');if(!ov)return;var b=ov.querySelector('.aud-float');if(!b){b=document.createElement('button');b.className='aud-ico aud-float';b.setAttribute('aria-label','Ήχοι');b.onclick=function(){openAudioSheet();};b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="2"/><rect x="17" y="14" width="4" height="6" rx="2"/></svg>';ov.appendChild(b);}b.classList.toggle('playing',!!state.audio.playing);}
+var AUD_WAV={};
+function encodeWav(samples,sr){var n=samples.length;var buf=new ArrayBuffer(44+n*2);var v=new DataView(buf);function ws(o,s){for(var i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}ws(0,'RIFF');v.setUint32(4,36+n*2,true);ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,n*2,true);for(var i=0;i<n;i++){var s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(44+i*2,s<0?s*0x8000:s*0x7FFF,true);}return new Blob([buf],{type:'audio/wav'});}
+function makeNoiseWav(kind){var sr=22050,sec=6,n=sr*sec;var x=new Float32Array(n);var l=0;for(var i=0;i<n;i++){var w=Math.random()*2-1;if(kind==='sea'){l=(l+0.02*w)/1.02;x[i]=l*3.5;}else{x[i]=w*0.35;}}
+if(kind==='sea'){for(var i=0;i<n;i++){x[i]*=0.55+0.45*Math.sin(2*Math.PI*0.12*(i/sr));}}else{var y=0;for(var i=0;i<n;i++){y=0.7*y+0.3*x[i];x[i]=y;}}
+var f=Math.floor(sr*0.05);for(var i=0;i<f;i++){var g=i/f;x[i]*=g;x[n-1-i]*=g;}
+return encodeWav(x,sr);}
+function noiseStart(){return;}
+function noiseStop(){try{AUD_EL.pause();}catch(e){}}
+var AUD_REAL={'forest.mp3':'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav','rain.mp3':'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav','satie.mp3':'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg','gymnopedie.mp3':'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg','ambient.mp3':'002_Synthwave_15k.mp3'};
+var AUD_NAMES={'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav':'Δάσος (ηχογράφηση)','Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg':'Gymnopédie No. 1 — Satie','002_Synthwave_15k.mp3':'Calm Ambient'};
+var AUD_BUILTIN=[{cat:'nature',name:'Φύση',tracks:[{id:'forest-file',kind:'file',url:'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav',name:'Δάσος (ηχογράφηση)'},{id:'rain',kind:'noise',name:'Βροχή'},{id:'sea',kind:'noise',name:'Θάλασσα'}]},{cat:'classical',name:'Κλασική',tracks:[{id:'gymnopedie',kind:'file',url:'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg',name:'Gymnopédie No. 1 — Satie'}]},{cat:'ambient',name:'Ambient',tracks:[{id:'ambient1',kind:'file',url:'002_Synthwave_15k.mp3',name:'Calm Ambient'}]}];
+function ensureBuiltin(){var a=state.audio;AUD_BUILTIN.forEach(function(b){var c=a.categories.find(function(x){return x.id===b.cat;});if(!c){c={id:b.cat,name:b.name,builtin:true,tracks:[]};a.categories.push(c);}c.name=b.name;c.builtin=true;b.tracks.forEach(function(t){if(!c.tracks.find(function(x){return x.id===t.id;}))c.tracks.push({id:t.id,kind:t.kind,url:t.url,name:t.name});});});}
+function audNormalize(){var a=state.audio;a.categories.forEach(function(c){c.tracks.forEach(function(t){if(t.kind==='file'){if(AUD_REAL[t.url])t.url=AUD_REAL[t.url];if(AUD_NAMES[t.url])t.name=AUD_NAMES[t.url];}});});
+var seen={};a.categories.slice().forEach(function(c){if(seen[c.name]){var keep=seen[c.name];c.tracks.forEach(function(t){if(!keep.tracks.find(function(x){return x.id===t.id;}))keep.tracks.push(t);});a.categories=a.categories.filter(function(x){return x!==c;});if(a.curCat===c.id)a.curCat=keep.id;}else{seen[c.name]=c;}});
+a.categories.forEach(function(c){var u={};c.tracks=c.tracks.filter(function(t){var k=(t.kind==='file')?t.url:t.id;if(u[k])return false;u[k]=1;return true;});});}
+function audPlayTrack(catId,tr){var a=state.audio;if(a.volume<=0)a.volume=0.7;a.curCat=catId;a.curTrack=tr.id;a.playing=true;try{AUD_EL.pause();}catch(e){}
+var finish=function(url){try{AUD_EL.src=url;AUD_EL.volume=a.volume;AUD_EL.loop=a.loop;AUD_EL.play().then(function(){showToast('Παίζει: '+tr.name);audInject();}).catch(function(e){showToast('Αποτυχία αναπαραγωγής ('+(e&&e.name?e.name:'σφάλμα')+'). Έλεγξε το media volume.');a.playing=false;audInject();});}catch(e){showToast('Σφάλμα ήχου.');a.playing=false;audInject();}};
+if(tr.kind==='noise'){if(!AUD_WAV[tr.id]){AUD_WAV[tr.id]=URL.createObjectURL(makeNoiseWav(tr.id));}finish(AUD_WAV[tr.id]);}
+else if(tr.kind==='local'){audGet(tr.key).then(function(b){if(!b){showToast('Το αρχείο δεν βρέθηκε στη συσκευή.');a.playing=false;audInject();return;}finish(URL.createObjectURL(b));});}
+else{finish(tr.url);}
+saveState();audInject();}
 var AUD_FILE=null;
 function audPick(catId){if(!AUD_FILE){AUD_FILE=document.createElement('input');AUD_FILE.type='file';AUD_FILE.accept='audio/*';AUD_FILE.multiple=true;AUD_FILE.style.display='none';document.body.appendChild(AUD_FILE);AUD_FILE.onchange=function(){audImport(AUD_FILE.dataset.cat,AUD_FILE.files);AUD_FILE.value='';};}AUD_FILE.dataset.cat=catId;AUD_FILE.click();}
-function audImport(catId,files){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c||!files.length)return;var done=0;Array.prototype.forEach.call(files,function(f){var key='b'+Date.now()+'_'+Math.random().toString(36).slice(2,8);audPut(key,f).then(function(){c.tracks.push({id:key,name:f.name.replace(/\.[^.]+$/,''),kind:'local',key:key});done++;saveState();if(done===files.length){showToast('Προστέθηκαν '+done+' αρχεία.');openCategorySheet(catId);}});});}
-function audDelTrack(catId,trId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;var t=c.tracks.find(function(x){return x.id===trId;});if(!t)return;if(state.audio.curTrack===trId){state.audio.playing=false;noiseStop();AUD_EL.pause();}if(t.kind==='local')audDel(t.key);c.tracks=c.tracks.filter(function(x){return x.id!==trId;});saveState();openCategorySheet(catId);}
-function audNewCat(){var n=prompt('Όνομα νέας κατηγορίας:');if(!n)return;state.audio.categories.push({id:'c'+Date.now(),name:n,tracks:[]});saveState();openAudioSheet();}
-function audRenameCat(catId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;var n=prompt('Νέο όνομα κατηγορίας:',c.name);if(!n)return;c.name=n;saveState();openAudioSheet();}
-function audDelCat(catId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;if(!confirm('Διαγραφή κατηγορίας "'+c.name+'" και των ήχων της;'))return;c.tracks.forEach(function(t){if(t.kind==='local')audDel(t.key);});if(state.audio.curCat===catId){state.audio.playing=false;noiseStop();AUD_EL.pause();}state.audio.categories=state.audio.categories.filter(function(x){return x.id!==catId;});saveState();openAudioSheet();}
-function openCategorySheet(catId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;var body='<div class="actions" style="margin:0 0 12px"><button class="btn btn-primary" onclick="audPick(\''+catId+'\')">Προσθήκη από συσκευή</button><button class="btn btn-ghost" onclick="audRenameCat(\''+catId+'\')">Μετονομασία</button><button class="btn btn-ghost-danger" onclick="audDelCat(\''+catId+'\')">Διαγραφή</button></div>';
-body+=c.tracks.length?c.tracks.map(function(t){var cur=state.audio.curTrack===t.id&&state.audio.playing;return '<div class="aud-row"><button class="aud-ico '+(cur?'playing':'')+'" onclick="audPlayTrack(\''+catId+'\',state.audio.categories.find(function(x){return x.id===\''+catId+'\';}).tracks.find(function(x){return x.id===\''+t.id+'\';}))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l12 8-12 8z"/></svg></button><span class="aname">'+esc(t.name)+'</span><button class="aud-ico" onclick="audDelTrack(\''+catId+'\',\''+t.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button></div>';}).join(''):'<p class="muted">Καμία ήχος ακόμη. Πρόσθεσε αρχεία από τη συσκευή.</p>';
-openModal({title:c.name,body:body,buttons:[{text:'Πίσω',class:'btn-ghost',onClick:function(){openAudioSheet();}},{text:'Κλείσιμο'}]});}
-function openAudioSheet(){ensureBuiltin();var a=state.audio;var cur=audFindTrack();var body='<div class="aud-bar"><button class="aud-ico '+(a.playing?'playing':'')+'" onclick="audToggle();openAudioSheet();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(a.playing?'<path d="M8 5v14"/><path d="M16 5v14"/>':'<path d="M7 4l12 8-12 8z"/>')+'</svg></button><button class="aud-ico" onclick="audNext();openAudioSheet();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8z"/><path d="M19 5v14"/></svg></button><input type="range" min="0" max="1" step="0.05" value="'+a.volume+'" onchange="audSetVol(parseFloat(this.value))"><button class="aud-ico '+(a.loop?'playing':'')+'" onclick="state.audio.loop=!state.audio.loop;AUD_EL.loop=state.audio.loop;saveState();openAudioSheet();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button></div>';
-body+='<p class="muted" style="margin:0 0 12px">'+(cur?('Παίζει: '+esc(cur.name)):'Τίποτα δεν παίζει.')+'</p>';
-body+=a.categories.map(function(c){return '<button class="aud-cat" onclick="openCategorySheet(\''+c.id+'\')"><strong>'+esc(c.name)+'</strong><span>'+c.tracks.length+' ήχοι</span></button>';}).join('');
-body+='<div class="actions" style="margin-top:10px"><button class="btn btn-ghost" onclick="audNewCat()">Νέα κατηγορία</button></div>';
-openModal({title:'Ήχοι & κατηγορίες',body:body,buttons:[{text:'Κλείσιμο'}]});}
-</script>
-
-<script>
-function audReopen(fn){closeModal();setTimeout(fn,60);}
 function audImport(catId,files){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c||!files.length)return;var done=0;Array.prototype.forEach.call(files,function(f){var key='b'+Date.now()+'_'+Math.random().toString(36).slice(2,8);audPut(key,f).then(function(){c.tracks.push({id:key,name:f.name.replace(/\.[^.]+$/,''),kind:'local',key:key});done++;saveState();if(done===files.length){showToast('Προστέθηκαν '+done+' αρχεία.');audReopen(function(){openCategorySheet(catId);});}});});}
+function audDelTrack(catId,trId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;var t=c.tracks.find(function(x){return x.id===trId;});if(!t)return;if(state.audio.curTrack===trId){state.audio.playing=false;noiseStop();AUD_EL.pause();}if(t.kind==='local')audDel(t.key);c.tracks=c.tracks.filter(function(x){return x.id!==trId;});saveState();audReopen(function(){openCategorySheet(catId);});}
 function audNewCat(){var n=prompt('Όνομα νέας κατηγορίας:');if(!n)return;state.audio.categories.push({id:'c'+Date.now(),name:n,tracks:[]});saveState();audReopen(openAudioSheet);}
 function audRenameCat(catId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;var n=prompt('Νέο όνομα κατηγορίας:',c.name);if(!n)return;c.name=n;saveState();audReopen(openAudioSheet);}
 function audDelCat(catId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;if(!confirm('Διαγραφή κατηγορίας "'+c.name+'" και των ήχων της;'))return;c.tracks.forEach(function(t){if(t.kind==='local')audDel(t.key);});if(state.audio.curCat===catId){state.audio.playing=false;noiseStop();AUD_EL.pause();}state.audio.categories=state.audio.categories.filter(function(x){return x.id!==catId;});saveState();audReopen(openAudioSheet);}
-function openCategorySheet(catId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;
-var body='<div class="actions" style="margin:0 0 12px"><button class="btn btn-primary" onclick="audPick(\''+catId+'\')">Προσθήκη από συσκευή</button><button class="btn btn-ghost" onclick="audRenameCat(\''+catId+'\')">Μετονομασία</button><button class="btn btn-ghost-danger" onclick="audDelCat(\''+catId+'\')">Διαγραφή</button></div>';
-body+=c.tracks.length?c.tracks.map(function(t){var cur=state.audio.curTrack===t.id&&state.audio.playing;return '<div class="aud-row"><button class="aud-ico '+(cur?'playing':'')+'" onclick="audPlayTrack(\''+catId+'\',state.audio.categories.find(function(x){return x.id===\''+catId+'\';}).tracks.find(function(x){return x.id===\''+t.id+'\';}));audReopen(function(){openCategorySheet(\''+catId+'\');})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l12 8-12 8z"/></svg></button><span class="aname">'+esc(t.name)+'</span><button class="aud-ico" onclick="audDelTrack(\''+catId+'\',\''+t.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button></div>';}).join(''):'<p class="muted">Κανένας ήχος ακόμη. Πρόσθεσε αρχεία από τη συσκευή.</p>';
-openModal({title:c.name,body:body,buttons:[{text:'Πίσω',class:'btn-ghost',onClick:function(){audReopen(openAudioSheet);}},{text:'Κλείσιμο'}]});}
-function openAudioSheet(){ensureBuiltin();var a=state.audio;var cur=audFindTrack();
-var body='<div class="aud-bar"><button class="aud-ico '+(a.playing?'playing':'')+'" onclick="audToggle();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(a.playing?'<path d="M8 5v14"/><path d="M16 5v14"/>':'<path d="M7 4l12 8-12 8z"/>')+'</svg></button><button class="aud-ico" onclick="audNext();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8z"/><path d="M19 5v14"/></svg></button><input type="range" min="0" max="1" step="0.05" value="'+a.volume+'" onchange="audSetVol(parseFloat(this.value))"><button class="aud-ico '+(a.loop?'playing':'')+'" onclick="state.audio.loop=!state.audio.loop;AUD_EL.loop=state.audio.loop;saveState();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button></div>';
-body+='<p class="muted" style="margin:0 0 12px">'+(cur?('Παίζει: '+esc(cur.name)):'Τίποτα δεν παίζει.')+'</p>';
-body+=a.categories.map(function(c){return '<button class="aud-cat" onclick="audReopen(function(){openCategorySheet(\''+c.id+'\');})"><strong>'+esc(c.name)+'</strong><span>'+c.tracks.length+' ήχοι</span></button>';}).join('');
-body+='<div class="actions" style="margin-top:10px"><button class="btn btn-ghost" onclick="audNewCat()">Νέα κατηγορία</button></div>';
-openModal({title:'Ήχοι & κατηγορίες',body:body,buttons:[{text:'Κλείσιμο'}]});}
-</script>
-
-  <style>
-#modalOverlay{z-index:160}
-.aud-fab{position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:65;width:46px;height:46px;border-radius:16px;border:1px solid var(--card-border);background:var(--card);color:var(--primary);display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 20px rgba(35,47,95,.18)}
-.aud-fab.playing{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border-color:transparent}
-.aud-fab svg{width:22px;height:22px}
-#focusOverlay .aud-stop{position:absolute;top:18px;right:64px}
-</style>
-<script>
 var HEAD_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="2"/><rect x="17" y="14" width="4" height="6" rx="2"/></svg>';
 var STOP_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 function audReopen(fn){closeModal();fn();}
 function audStopAll(){state.audio.playing=false;noiseStop();AUD_EL.pause();AUD_EL.removeAttribute('src');saveState();audInject();}
-(function(){var a=state.audio;if(!a)return;var c=a.categories.find(function(x){return x.id==='noise';});if(c){c.name='Φύση';c.tracks=c.tracks.filter(function(t){return t.id!=='brown';});if(!c.tracks.find(function(t){return t.id==='rain';}))c.tracks.push({id:'rain',name:'Βροχή',kind:'noise'});if(!c.tracks.find(function(t){return t.id==='sea';}))c.tracks.push({id:'sea',name:'Θάλασσα',kind:'noise'});if(a.curTrack==='brown'){a.playing=false;a.curTrack=null;noiseStop();}saveState();}})();
-function ensureBuiltin(){var a=state.audio;if(!a.categories.find(function(c){return c.id==='noise';})){a.categories.unshift({id:'noise',name:'Φύση',builtin:true,tracks:[{id:'rain',name:'Βροχή',kind:'noise'},{id:'sea',name:'Θάλασσα',kind:'noise'}]});saveState();}}
-var AUD_EXTRA=[];
-function makeNoiseBuffer(ctx,type){var n=2*ctx.sampleRate;var buf=ctx.createBuffer(1,n,ctx.sampleRate);var d=buf.getChannelData(0);var l=0;for(var i=0;i<n;i++){var w=Math.random()*2-1;if(type==='brown'){l=(l+0.02*w)/1.02;d[i]=l*3.5;}else{d[i]=w*0.4;}}return buf;}
-function noiseStop(){if(AUD_NS){try{AUD_NS.stop();}catch(e){}AUD_NS=null;}for(var i=0;i<AUD_EXTRA.length;i++){try{AUD_EXTRA[i].stop();}catch(e){}}AUD_EXTRA=[];if(AUD_NG){try{AUD_NG.disconnect();}catch(e){}AUD_NG=null;}}
-function noiseStart(kind){AUD_CTX=AUD_CTX||new (window.AudioContext||window.webkitAudioContext)();if(AUD_CTX.state==='suspended')AUD_CTX.resume();noiseStop();
-var out=AUD_CTX.createGain();out.gain.value=state.audio.volume;out.connect(AUD_CTX.destination);AUD_NG=out;
-if(kind==='sea'){var src=AUD_CTX.createBufferSource();src.buffer=makeNoiseBuffer(AUD_CTX,'brown');src.loop=true;var f=AUD_CTX.createBiquadFilter();f.type='lowpass';f.frequency.value=600;var g=AUD_CTX.createGain();g.gain.value=0.7;var lfo=AUD_CTX.createOscillator();lfo.frequency.value=0.12;var lg=AUD_CTX.createGain();lg.gain.value=0.35;lfo.connect(lg);lg.connect(g.gain);src.connect(f);f.connect(g);g.connect(out);src.start();lfo.start();AUD_NS=src;AUD_EXTRA=[lfo];}
-else{var s1=AUD_CTX.createBufferSource();s1.buffer=makeNoiseBuffer(AUD_CTX,'white');s1.loop=true;var hp=AUD_CTX.createBiquadFilter();hp.type='highpass';hp.frequency.value=300;var lp=AUD_CTX.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1400;var g1=AUD_CTX.createGain();g1.gain.value=0.5;s1.connect(hp);hp.connect(lp);lp.connect(g1);g1.connect(out);var s2=AUD_CTX.createBufferSource();s2.buffer=makeNoiseBuffer(AUD_CTX,'white');s2.loop=true;var hf=AUD_CTX.createBiquadFilter();hf.type='highpass';hf.frequency.value=5000;var hg=AUD_CTX.createGain();hg.gain.value=0.12;s2.connect(hf);hf.connect(hg);hg.connect(out);s1.start();s2.start();AUD_NS=s1;AUD_EXTRA=[s2];}}
-function audPlayTrack(catId,tr){var a=state.audio;a.curCat=catId;a.curTrack=tr.id;a.playing=true;noiseStop();AUD_EL.pause();if(tr.kind==='noise'){noiseStart(tr.id);}else if(tr.kind==='local'){audGet(tr.key).then(function(b){if(!b){showToast('Το αρχείο δεν βρέθηκε στη συσκευή.');a.playing=false;audInject();return;}AUD_EL.src=URL.createObjectURL(b);AUD_EL.volume=a.volume;AUD_EL.loop=a.loop;AUD_EL.play().catch(function(){showToast('Αποτυχία αναπαραγωγής.');});});}else{AUD_EL.src=tr.url;AUD_EL.volume=a.volume;AUD_EL.loop=a.loop;AUD_EL.play().catch(function(){showToast('Αποτυχία αναπαραγωγής.');});}saveState();audInject();}
 function audInject(){var ov=document.getElementById('focusOverlay');if(ov){var b=ov.querySelector('.aud-float');if(!b){b=document.createElement('button');b.className='aud-ico aud-float';b.setAttribute('aria-label','Ήχοι');b.onclick=function(){openAudioSheet();};b.innerHTML=HEAD_SVG;ov.appendChild(b);}b.classList.toggle('playing',!!state.audio.playing);var s=ov.querySelector('.aud-stop');if(!s){s=document.createElement('button');s.className='aud-ico aud-stop';s.setAttribute('aria-label','Διακοπή ήχου');s.onclick=function(){audStopAll();};s.innerHTML=STOP_SVG;ov.appendChild(s);}s.style.display=state.audio.playing?'grid':'none';}
 var fab=document.querySelector('.aud-fab');if(!fab){fab=document.createElement('button');fab.className='aud-fab';fab.setAttribute('aria-label','Ήχοι');fab.onclick=function(){openAudioSheet();};fab.innerHTML=HEAD_SVG;document.body.appendChild(fab);}fab.classList.toggle('playing',!!state.audio.playing);}
+var _ufo=updateFocusOverlay;updateFocusOverlay=function(f){_ufo(f);audInject();};
 var _ul=updateLive;updateLive=function(){_ul();audInject();};
+function audTest(){var sr=22050,n=sr;var s=new Float32Array(n);for(var i=0;i<n;i++){var t=i/sr;var env=t<0.05?t/0.05:(t>0.95?(1-t)/0.05:1);s[i]=0.4*Math.sin(2*Math.PI*440*t)*env;}var u=URL.createObjectURL(encodeWav(s,sr));var t2=new Audio(u);t2.volume=(state.audio.volume>0?state.audio.volume:0.7);t2.play().then(function(){showToast('Δοκιμή: το μονοπάτι ήχου δουλεύει.');}).catch(function(e){showToast('Δοκιμή απέτυχε ('+(e&&e.name?e.name:'σφάλμα')+'). Το πρόβλημα είναι στη συσκευή ή στον browser.');});}
 function openCategorySheet(catId){var c=state.audio.categories.find(function(x){return x.id===catId;});if(!c)return;if(modalOpen){closeModal();}
 var body='<div class="actions" style="margin:0 0 12px"><button class="btn btn-primary" onclick="audPick(\''+catId+'\')">Προσθήκη από συσκευή</button><button class="btn btn-ghost" onclick="audRenameCat(\''+catId+'\')">Μετονομασία</button><button class="btn btn-ghost-danger" onclick="audDelCat(\''+catId+'\')">Διαγραφή</button></div>';
 body+=c.tracks.length?c.tracks.map(function(t){var cur=state.audio.curTrack===t.id&&state.audio.playing;return '<div class="aud-row"><button class="aud-ico '+(cur?'playing':'')+'" onclick="audPlayTrack(\''+catId+'\',state.audio.categories.find(function(x){return x.id===\''+catId+'\';}).tracks.find(function(x){return x.id===\''+t.id+'\';}));audReopen(function(){openCategorySheet(\''+catId+'\');})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l12 8-12 8z"/></svg></button><span class="aname">'+esc(t.name)+'</span><button class="aud-ico" onclick="audDelTrack(\''+catId+'\',\''+t.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button></div>';}).join(''):'<p class="muted">Κανένας ήχος ακόμη. Πρόσθεσε αρχεία από τη συσκευή.</p>';
 openModal({title:c.name,body:body,buttons:[{text:'Πίσω',class:'btn-ghost',close:false,onClick:function(){audReopen(openAudioSheet);}},{text:'Κλείσιμο'}]});}
-function openAudioSheet(){ensureBuiltin();if(modalOpen){closeModal();}var a=state.audio;var cur=audFindTrack();
-var body='<div class="aud-bar"><button class="aud-ico '+(a.playing?'playing':'')+'" onclick="audToggle();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(a.playing?'<path d="M8 5v14"/><path d="M16 5v14"/>':'<path d="M7 4l12 8-12 8z"/>')+'</svg></button><button class="aud-ico" onclick="audNext();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8z"/><path d="M19 5v14"/></svg></button><input type="range" min="0" max="1" step="0.05" value="'+a.volume+'" onchange="audSetVol(parseFloat(this.value))"><button class="aud-ico" onclick="audStopAll();audReopen(openAudioSheet);">'+STOP_SVG+'</button><button class="aud-ico '+(a.loop?'playing':'')+'" onclick="state.audio.loop=!state.audio.loop;AUD_EL.loop=state.audio.loop;saveState();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button></div>';
+function openAudioSheet(){ensureBuiltin();audNormalize();if(modalOpen){closeModal();}var a=state.audio;var cur=audFindTrack();
+var body='<div class="aud-bar"><button class="aud-ico '+(a.playing?'playing':'')+'" onclick="audToggle();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(a.playing?'<path d="M8 5v14"/><path d="M16 5v14"/>':'<path d="M7 4l12 8-12 8z"/>')+'</svg></button><button class="aud-ico" onclick="audNext();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8z"/><path d="M19 5v14"/></svg></button><input type="range" min="0" max="1" step="0.05" value="'+a.volume+'" onchange="audSetVol(parseFloat(this.value))"><button class="aud-ico" onclick="audStopAll();audReopen(openAudioSheet);">'+STOP_SVG+'</button><button class="aud-ico" onclick="audTest();" aria-label="Δοκιμή ήχου"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button><button class="aud-ico '+(a.loop?'playing':'')+'" onclick="state.audio.loop=!state.audio.loop;AUD_EL.loop=state.audio.loop;saveState();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button></div>';
 body+='<p class="muted" style="margin:0 0 12px">'+(cur?('Παίζει: '+esc(cur.name)):'Τίποτα δεν παίζει.')+'</p>';
 body+=a.categories.map(function(c){return '<button class="aud-cat" onclick="audReopen(function(){openCategorySheet(\''+c.id+'\');})"><strong>'+esc(c.name)+'</strong><span>'+c.tracks.length+' ήχοι</span></button>';}).join('');
 body+='<div class="actions" style="margin-top:10px"><button class="btn btn-ghost" onclick="audNewCat()">Νέα κατηγορία</button></div>';
 openModal({title:'Ήχοι & κατηγορίες',body:body,buttons:[{text:'Κλείσιμο'}]});}
-</script>
-
-<script>
 function safeCtl(){return (navigator.serviceWorker&&navigator.serviceWorker.controller)?navigator.serviceWorker.controller:null;}
 function safeSetForce(on,then){var sw=safeCtl();if(sw){try{sw.postMessage({type:'set-force',on:!!on});}catch(e){}}setTimeout(function(){if(then)then();},150);}
 function safeToast(m){var t=document.getElementById('safeToast');if(!t){t=document.createElement('div');t.id='safeToast';t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#202748;color:#fff;padding:10px 16px;border-radius:999px;font:700 .84rem system-ui,sans-serif;z-index:400;transition:opacity .3s';document.body.appendChild(t);}t.textContent=m;t.style.opacity='1';setTimeout(function(){t.style.opacity='0';},2200);}
@@ -925,129 +892,9 @@ p.innerHTML='<div style="width:100%;max-width:430px;background:#1e1e2e;color:#ff
 p.onclick=function(e){if(e.target===p)p.remove();};document.body.appendChild(p);}
 window.safeSettings=safeSettings;
 (function(){var sw=safeCtl();if(sw){try{sw.postMessage({type:'get-force'});}catch(e){}}if(navigator.serviceWorker&&navigator.serviceWorker.addEventListener){navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.type==='force-state'){window.__force=e.data.on;}});}})();
+ensureBuiltin();audNormalize();saveState();
 </script>
-
-<script>
-var AUD_WAV={};
-function encodeWav(samples,sr){var n=samples.length;var buf=new ArrayBuffer(44+n*2);var v=new DataView(buf);function ws(o,s){for(var i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}ws(0,'RIFF');v.setUint32(4,36+n*2,true);ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,n*2,true);for(var i=0;i<n;i++){var s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(44+i*2,s<0?s*0x8000:s*0x7FFF,true);}return new Blob([buf],{type:'audio/wav'});}
-function makeNoiseWav(kind){var sr=22050,sec=6,n=sr*sec;var x=new Float32Array(n);var l=0;for(var i=0;i<n;i++){var w=Math.random()*2-1;if(kind==='sea'){l=(l+0.02*w)/1.02;x[i]=l*3.5;}else{x[i]=w*0.35;}}
-if(kind==='sea'){for(var i=0;i<n;i++){x[i]*=0.55+0.45*Math.sin(2*Math.PI*0.12*(i/sr));}}else{var y=0;for(var i=0;i<n;i++){y=0.7*y+0.3*x[i];x[i]=y;}}
-var f=Math.floor(sr*0.05);for(var i=0;i<f;i++){var g=i/f;x[i]*=g;x[n-1-i]*=g;}
-return encodeWav(x,sr);}
-function noiseStart(){return;}
-function noiseStop(){try{AUD_EL.pause();}catch(e){}}
-function audPlayTrack(catId,tr){var a=state.audio;if(a.volume<=0)a.volume=0.7;a.curCat=catId;a.curTrack=tr.id;a.playing=true;try{AUD_EL.pause();}catch(e){}
-var finish=function(url){try{AUD_EL.src=url;AUD_EL.volume=a.volume;AUD_EL.loop=true;AUD_EL.play().then(function(){showToast('Παίζει: '+tr.name);audInject();}).catch(function(e){showToast('Αποτυχία αναπαραγωγής ('+(e&&e.name?e.name:'σφάλμα')+'). Έλεγξε το media volume.');a.playing=false;audInject();});}catch(e){showToast('Σφάλμα ήχου.');a.playing=false;audInject();}};
-if(tr.kind==='noise'){if(!AUD_WAV[tr.id]){AUD_WAV[tr.id]=URL.createObjectURL(makeNoiseWav(tr.id));}finish(AUD_WAV[tr.id]);}
-else if(tr.kind==='local'){audGet(tr.key).then(function(b){if(!b){showToast('Το αρχείο δεν βρέθηκε στη συσκευή.');a.playing=false;audInject();return;}finish(URL.createObjectURL(b));});}
-else{finish(tr.url);}
-saveState();audInject();}
-function audTest(){var sr=22050,n=sr;var s=new Float32Array(n);for(var i=0;i<n;i++){var t=i/sr;var env=t<0.05?t/0.05:(t>0.95?(1-t)/0.05:1);s[i]=0.4*Math.sin(2*Math.PI*440*t)*env;}var u=URL.createObjectURL(encodeWav(s,sr));var t2=new Audio(u);t2.volume=(state.audio.volume>0?state.audio.volume:0.7);t2.play().then(function(){showToast('Δοκιμή: το μονοπάτι ήχου δουλεύει.');}).catch(function(e){showToast('Δοκιμή απέτυχε ('+(e&&e.name?e.name:'σφάλμα')+'). Το πρόβλημα είναι στη συσκευή ή στον browser.');});}
-function openAudioSheet(){ensureBuiltin();if(modalOpen){closeModal();}var a=state.audio;var cur=audFindTrack();
-var body='<div class="aud-bar"><button class="aud-ico '+(a.playing?'playing':'')+'" onclick="audToggle();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(a.playing?'<path d="M8 5v14"/><path d="M16 5v14"/>':'<path d="M7 4l12 8-12 8z"/>')+'</svg></button><button class="aud-ico" onclick="audNext();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8z"/><path d="M19 5v14"/></svg></button><input type="range" min="0" max="1" step="0.05" value="'+a.volume+'" onchange="audSetVol(parseFloat(this.value))"><button class="aud-ico" onclick="audStopAll();audReopen(openAudioSheet);">'+STOP_SVG+'</button><button class="aud-ico" onclick="audTest();" aria-label="Δοκιμή ήχου"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button><button class="aud-ico '+(a.loop?'playing':'')+'" onclick="state.audio.loop=!state.audio.loop;AUD_EL.loop=state.audio.loop;saveState();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button></div>';
-body+='<p class="muted" style="margin:0 0 12px">'+(cur?('Παίζει: '+esc(cur.name)):'Τίποτα δεν παίζει.')+'</p>';
-body+=a.categories.map(function(c){return '<button class="aud-cat" onclick="audReopen(function(){openCategorySheet(\''+c.id+'\');})"><strong>'+esc(c.name)+'</strong><span>'+c.tracks.length+' ήχοι</span></button>';}).join('');
-body+='<div class="actions" style="margin-top:10px"><button class="btn btn-ghost" onclick="audNewCat()">Νέα κατηγορία</button></div>';
-openModal({title:'Ήχοι & κατηγορίες',body:body,buttons:[{text:'Κλείσιμο'}]});}
-</script>
-
-<script>
-(function(){var a=state.audio;if(!a)return;
-var builtins=[
-{catId:'nature',catName:'Φύση',tracks:[
-{id:'rain-file',name:'Βροχή',kind:'file',url:'rain.mp3'},
-{id:'sea',name:'Θάλασσα',kind:'noise'}
-]},
-{catId:'classical',catName:'Κλασική',tracks:[
-{id:'gymnopedie',name:'Gymnopédie No. 1 — Satie',kind:'file',url:'gymnopedie.mp3'}
-]},
-{catId:'ambient',catName:'Ambient',tracks:[
-{id:'ambient1',name:'Calm Ambient',kind:'file',url:'ambient.mp3'}
-]}
-];
-builtins.forEach(function(def){
-var cat=a.categories.find(function(c){return c.id===def.catId;});
-if(!cat){cat={id:def.catId,name:def.catName,builtin:true,tracks:[]};a.categories.push(cat);}
-cat.name=def.catName;cat.builtin=true;
-def.tracks.forEach(function(t){
-if(!cat.tracks.find(function(x){return x.id===t.id;})){cat.tracks.push(t);}
-});
-});
-var old=a.categories.find(function(c){return c.id==='noise';});
-if(old){
-var nature=a.categories.find(function(c){return c.id==='nature';});
-if(nature){old.tracks.forEach(function(t){if(t.id!=='brown'&&!nature.tracks.find(function(x){return x.id===t.id;}))nature.tracks.push(t);});a.categories=a.categories.filter(function(c){return c.id!=='noise';});}
-}
-saveState();
-})();
-var _apt=audPlayTrack;
-audPlayTrack=function(catId,tr){var a=state.audio;if(a.volume<=0)a.volume=0.7;a.curCat=catId;a.curTrack=tr.id;a.playing=true;try{AUD_EL.pause();}catch(e){}
-var finish=function(url){try{AUD_EL.src=url;AUD_EL.volume=a.volume;AUD_EL.loop=true;AUD_EL.play().then(function(){showToast('Παίζει: '+tr.name);audInject();}).catch(function(e){showToast('Αποτυχία αναπαραγωγής. Έλεγξε media volume.');a.playing=false;audInject();});}catch(e){showToast('Σφάλμα ήχου.');a.playing=false;audInject();}};
-if(tr.kind==='file'){finish(tr.url);}
-else if(tr.kind==='noise'){if(!AUD_WAV[tr.id]){AUD_WAV[tr.id]=URL.createObjectURL(makeNoiseWav(tr.id));}finish(AUD_WAV[tr.id]);}
-else if(tr.kind==='local'){audGet(tr.key).then(function(b){if(!b){showToast('Αρχείο δεν βρέθηκε.');a.playing=false;audInject();return;}finish(URL.createObjectURL(b));});}
-else{finish(tr.url);}
-saveState();audInject();};
-</script>
-
-<script>
-(function(){var a=state.audio;if(!a)return;
-var fix={'rain-file':{url:'forest.mp3',name:'Δάσος (ηχογράφηση)'},'gymnopedie':{url:'satie.mp3',name:'Gymnopédie No. 1 — Satie'},'ambient1':{url:'ambient.mp3',name:'Calm Ambient'}};
-a.categories.forEach(function(c){c.tracks.forEach(function(t){if(fix[t.id]){t.url=fix[t.id].url;t.name=fix[t.id].name;t.kind='file';}});});
-var ensure=[{cat:'nature',name:'Φύση',t:{id:'rain-file',name:'Δάσος (ηχογράφηση)',kind:'file',url:'forest.mp3'}},{cat:'classical',name:'Κλασική',t:{id:'gymnopedie',name:'Gymnopédie No. 1 — Satie',kind:'file',url:'satie.mp3'}},{cat:'ambient',name:'Ambient',t:{id:'ambient1',name:'Calm Ambient',kind:'file',url:'ambient.mp3'}}];
-ensure.forEach(function(e){var c=a.categories.find(function(x){return x.id===e.cat;});if(!c){c={id:e.cat,name:e.name,builtin:true,tracks:[]};a.categories.push(c);}c.name=e.name;c.builtin=true;if(!c.tracks.find(function(x){return x.id===e.t.id;}))c.tracks.push(e.t);});
-saveState();})();
-</script>
-
-<script>
-(function(){var a=state.audio;if(!a)return;
-var real={'rain-file':{url:'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav',name:'Δάσος (ηχογράφηση)'},'gymnopedie':{url:'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg',name:'Gymnopédie No. 1 — Satie'},'ambient1':{url:'002_Synthwave_15k.mp3',name:'Calm Ambient'}};
-a.categories.forEach(function(c){c.tracks.forEach(function(t){if(real[t.id]){t.url=real[t.id].url;t.name=real[t.id].name;t.kind='file';}});});
-var seen={};
-a.categories.slice().forEach(function(c){
-if(seen[c.name]){var keep=seen[c.name];
-c.tracks.forEach(function(t){if(!keep.tracks.find(function(x){return x.id===t.id;}))keep.tracks.push(t);});
-a.categories=a.categories.filter(function(x){return x!==c;});
-if(a.curCat===c.id)a.curCat=keep.id;
-}else{seen[c.name]=c;}
-});
-saveState();})();
-</script>
-
-<script>
-(function(){var a=state.audio;if(!a)return;
-var real={'forest.mp3':'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav','rain.mp3':'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav','satie.mp3':'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg','gymnopedie.mp3':'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg','ambient.mp3':'002_Synthwave_15k.mp3'};
-var names={'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav':'Δάσος (ηχογράφηση)','Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg':'Gymnopédie No. 1 — Satie','002_Synthwave_15k.mp3':'Calm Ambient'};
-a.categories.forEach(function(c){c.tracks.forEach(function(t){if(t.kind==='file'&&real[t.url]){t.url=real[t.url];}if(t.kind==='file'&&names[t.url]){t.name=names[t.url];}});});
-var seen={};
-a.categories.slice().forEach(function(c){
-if(seen[c.name]){var keep=seen[c.name];
-c.tracks.forEach(function(t){if(!keep.tracks.find(function(x){return x.id===t.id;}))keep.tracks.push(t);});
-a.categories=a.categories.filter(function(x){return x!==c;});
-if(a.curCat===c.id)a.curCat=keep.id;
-}else{seen[c.name]=c;}
-});
-a.categories.forEach(function(c){var u={};c.tracks=c.tracks.filter(function(t){var k=(t.kind==='file')?t.url:t.id;if(u[k])return false;u[k]=1;return true;});});
-saveState();})();
-</script>
-
-<script>
-(function(){var a=state.audio;if(!a)return;
-var map={'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav':'forest.mp3','Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg':'satie.mp3','002_Synthwave_15k.mp3':'ambient.mp3'};
-var names={'forest.mp3':'Δάσος (ηχογράφηση)','satie.mp3':'Gymnopédie No. 1 — Satie','ambient.mp3':'Calm Ambient'};
-a.categories.forEach(function(c){c.tracks.forEach(function(t){if(t.kind==='file'&&map[t.url]){t.url=map[t.url];}if(t.kind==='file'&&names[t.url]){t.name=names[t.url];}});});
-var seen={};
-a.categories.slice().forEach(function(c){
-if(seen[c.name]){var keep=seen[c.name];
-c.tracks.forEach(function(t){if(!keep.tracks.find(function(x){return x.id===t.id;}))keep.tracks.push(t);});
-a.categories=a.categories.filter(function(x){return x!==c;});
-if(a.curCat===c.id)a.curCat=keep.id;
-}else{seen[c.name]=c;}
-});
-a.categories.forEach(function(c){var u={};c.tracks=c.tracks.filter(function(t){var k=(t.kind==='file')?t.url:t.id;if(u[k])return false;u[k]=1;return true;});});
-saveState();})();
-</script>
-  
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
+
 </html>
