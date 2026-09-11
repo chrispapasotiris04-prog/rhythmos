@@ -797,6 +797,41 @@ function runUpdateCheck(){
 }
   
 applyUi();render();setInterval(tick,1000);
+
+<style>
+.aud-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.aud-row:last-child{border-bottom:none}
+.aud-row .aname{flex:1;min-width:0;font-size:.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aud-ico{width:38px;height:38px;min-width:38px;border-radius:12px;border:1px solid var(--card-border);background:var(--card);color:var(--primary);display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+.aud-ico svg{width:19px;height:19px}
+.aud-ico.playing{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border-color:transparent}
+.aud-bar{display:flex;align-items:center;gap:8px;margin:6px 0 12px}
+.aud-bar input[type=range]{flex:1;padding:0;height:32px}
+.aud-cat{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:11px 12px;margin-bottom:8px;cursor:pointer;color:var(--text)}
+.aud-cat strong{flex:1;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aud-cat span{font-size:.72rem;color:var(--muted)}
+#focusOverlay .aud-float{position:absolute;top:18px;right:18px}
+</style>
+<script>
+if(!state.audio)state.audio={categories:[],volume:.7,loop:true,curCat:null,curTrack:null,playing:false};
+var AUD_EL=new Audio();AUD_EL.loop=true;
+var AUD_DBP=null;
+function audDB(){if(AUD_DBP)return AUD_DBP;AUD_DBP=new Promise(function(res,rej){var r=indexedDB.open('rhythmos-audio',1);r.onupgradeneeded=function(){r.result.createObjectStore('blobs');};r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};});return AUD_DBP;}
+function audPut(k,b){return audDB().then(function(db){return new Promise(function(res,rej){var t=db.transaction('blobs','readwrite');t.objectStore('blobs').put(b,k);t.oncomplete=res;t.onerror=rej;});});}
+function audGet(k){return audDB().then(function(db){return new Promise(function(res,rej){var t=db.transaction('blobs','readonly');var q=t.objectStore('blobs').get(k);q.onsuccess=function(){res(q.result);};q.onerror=rej;});});}
+function audDel(k){return audDB().then(function(db){return new Promise(function(res,rej){var t=db.transaction('blobs','readwrite');t.objectStore('blobs').delete(k);t.oncomplete=res;t.onerror=rej;});});}
+var AUD_CTX=null,AUD_NS=null,AUD_NG=null;
+function noiseStart(){AUD_CTX=AUD_CTX||new (window.AudioContext||window.webkitAudioContext)();if(AUD_CTX.state==='suspended')AUD_CTX.resume();var n=2*AUD_CTX.sampleRate;var buf=AUD_CTX.createBuffer(1,n,AUD_CTX.sampleRate);var d=buf.getChannelData(0);var l=0;for(var i=0;i<n;i++){var w=Math.random()*2-1;l=(l+0.02*w)/1.02;d[i]=l*3.5;}AUD_NS=AUD_CTX.createBufferSource();AUD_NS.buffer=buf;AUD_NS.loop=true;AUD_NG=AUD_CTX.createGain();AUD_NG.gain.value=state.audio.volume;AUD_NS.connect(AUD_NG);AUD_NG.connect(AUD_CTX.destination);AUD_NS.start();}
+function noiseStop(){if(AUD_NS){try{AUD_NS.stop();}catch(e){}AUD_NS=null;AUD_NG=null;}}
+function audSetVol(v){state.audio.volume=v;AUD_EL.volume=v;if(AUD_NG)AUD_NG.gain.value=v;saveState();}
+function audFindTrack(){var a=state.audio;if(!a.curCat||!a.curTrack)return null;var c=a.categories.find(function(x){return x.id===a.curCat;});if(!c)return null;return c.tracks.find(function(x){return x.id===a.curTrack;})||null;}
+function audPlayTrack(catId,tr){var a=state.audio;a.curCat=catId;a.curTrack=tr.id;a.playing=true;noiseStop();AUD_EL.pause();if(tr.kind==='noise'){noiseStart();}else if(tr.kind==='local'){audGet(tr.key).then(function(b){if(!b){showToast('Το αρχείο δεν βρέθηκε στη συσκευή.');a.playing=false;return;}AUD_EL.src=URL.createObjectURL(b);AUD_EL.volume=a.volume;AUD_EL.loop=a.loop;AUD_EL.play().catch(function(){showToast('Αποτυχία αναπαραγωγής.');});});}else{AUD_EL.src=tr.url;AUD_EL.volume=a.volume;AUD_EL.loop=a.loop;AUD_EL.play().catch(function(){showToast('Αποτυχία αναπαραγωγής.');});}saveState();}
+function audToggle(){var a=state.audio;if(!a.playing){var t=audFindTrack();if(t)audPlayTrack(a.curCat,t);else if(a.categories.length&&a.categories[0].tracks.length)audPlayTrack(a.categories[0].id,a.categories[0].tracks[0]);else openAudioSheet();}else{a.playing=false;noiseStop();AUD_EL.pause();saveState();}}
+function audNext(){var a=state.audio;var c=a.categories.find(function(x){return x.id===a.curCat;});if(!c||!c.tracks.length)return;var i=c.tracks.findIndex(function(x){return x.id===a.curTrack;});audPlayTrack(c.id,c.tracks[(i+1)%c.tracks.length]);}
+function ensureBuiltin(){var a=state.audio;if(!a.categories.find(function(c){return c.id==='noise';})){a.categories.unshift({id:'noise',name:'Θόρυβοι',builtin:true,tracks:[{id:'brown',name:'Καφέ θόρυβος',kind:'noise'}]});saveState();}}
+ensureBuiltin();
+</script>
+  
 </script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
