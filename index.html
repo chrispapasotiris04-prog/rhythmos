@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ρυθμός</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="app-version" content="1.2.18">
+<meta name="app-version" content="1.2.19">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -762,7 +762,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'️',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.2.18';
+var APP_VERSION='1.2.19';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -841,9 +841,24 @@ var f=Math.floor(sr*0.05);for(var i=0;i<f;i++){var g=i/f;x[i]*=g;x[n-1-i]*=g;}
 return encodeWav(x,sr);}
 function noiseStart(){return;}
 function noiseStop(){try{AUD_EL.pause();}catch(e){}}
-var AUD_REAL={'forest.mp3':'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav','rain.mp3':'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav','satie.mp3':'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg','gymnopedie.mp3':'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg','ambient.mp3':'002_Synthwave_15k.mp3'};
-var AUD_NAMES={'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav':'Δάσος (ηχογράφηση)','Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg':'Gymnopédie No. 1 — Satie','002_Synthwave_15k.mp3':'Calm Ambient'};
-var AUD_BUILTIN=[{cat:'nature',name:'Φύση',tracks:[{id:'forest-file',kind:'file',url:'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav',name:'Δάσος (ηχογράφηση)'},{id:'rain',kind:'noise',name:'Βροχή'},{id:'sea',kind:'noise',name:'Θάλασσα'}]},{cat:'classical',name:'Κλασική',tracks:[{id:'gymnopedie',kind:'file',url:'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg',name:'Gymnopédie No. 1 — Satie'}]},{cat:'ambient',name:'Ambient',tracks:[{id:'ambient1',kind:'file',url:'002_Synthwave_15k.mp3',name:'Calm Ambient'}]}];
+var AUD_REAL={
+'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav':'forest.mp3',
+'audio/AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav':'forest.mp3',
+'Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg':'satie.mp3',
+'audio/Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg':'satie.mp3',
+'002_Synthwave_15k.mp3':'ambient.mp3',
+'audio/002_Synthwave_15k.mp3':'ambient.mp3',
+'rain.mp3':'forest.mp3',
+'gymnopedie.mp3':'satie.mp3',
+'audio/forest.mp3':'forest.mp3',
+'audio/satie.mp3':'satie.mp3',
+'audio/ambient.mp3':'ambient.mp3',
+'forest.mp3':'forest.mp3',
+'satie.mp3':'satie.mp3',
+'ambient.mp3':'ambient.mp3'
+};
+var AUD_NAMES={'forest.mp3':'Δάσος (ηχογράφηση)','satie.mp3':'Gymnopédie No. 1 — Satie','ambient.mp3':'Calm Ambient'};
+var AUD_BUILTIN=[{cat:'nature',name:'Φύση',tracks:[{id:'forest-file',kind:'file',url:'forest.mp3',name:'Δάσος (ηχογράφηση)'},{id:'rain',kind:'noise',name:'Βροχή'},{id:'sea',kind:'noise',name:'Θάλασσα'}]},{cat:'classical',name:'Κλασική',tracks:[{id:'gymnopedie',kind:'file',url:'satie.mp3',name:'Gymnopédie No. 1 — Satie'}]},{cat:'ambient',name:'Ambient',tracks:[{id:'ambient1',kind:'file',url:'ambient.mp3',name:'Calm Ambient'}]}];
 function ensureBuiltin(){var a=state.audio;AUD_BUILTIN.forEach(function(b){var c=a.categories.find(function(x){return x.id===b.cat;});if(!c){c={id:b.cat,name:b.name,builtin:true,tracks:[]};a.categories.push(c);}c.name=b.name;c.builtin=true;b.tracks.forEach(function(t){if(!c.tracks.find(function(x){return x.id===t.id;}))c.tracks.push({id:t.id,kind:t.kind,url:t.url,name:t.name});});});}
 function audNormalize(){var a=state.audio;a.categories.forEach(function(c){c.tracks.forEach(function(t){if(t.kind==='file'){if(AUD_REAL[t.url])t.url=AUD_REAL[t.url];if(AUD_NAMES[t.url])t.name=AUD_NAMES[t.url];}});});
 var seen={};a.categories.slice().forEach(function(c){if(seen[c.name]){var keep=seen[c.name];c.tracks.forEach(function(t){if(!keep.tracks.find(function(x){return x.id===t.id;}))keep.tracks.push(t);});a.categories=a.categories.filter(function(x){return x!==c;});if(a.curCat===c.id)a.curCat=keep.id;}else{seen[c.name]=c;}});
@@ -894,43 +909,6 @@ window.safeSettings=safeSettings;
 (function(){var sw=safeCtl();if(sw){try{sw.postMessage({type:'get-force'});}catch(e){}}if(navigator.serviceWorker&&navigator.serviceWorker.addEventListener){navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.type==='force-state'){window.__force=e.data.on;}});}})();
 ensureBuiltin();audNormalize();saveState();
 </script>
-
-<script>
-(function(){
-var _play=audPlayTrack;
-audPlayTrack=function(catId,tr){
-if(tr.kind==='file'&&tr.url){
-fetch(tr.url,{method:'HEAD'}).then(function(r){
-if(!r.ok){showToast('Δεν βρέθηκε στο server: '+tr.url+' (status '+r.status+')');return;}
-_play(catId,tr);
-}).catch(function(){showToast('Δεν έγινε έλεγχος αρχείου: '+tr.url);});
-return;
-}
-_play(catId,tr);
-};
-})();
-</script>
-
-<script>
-(function(){
-var a=state.audio;if(!a)return;
-var alts={
-'forest.mp3':['forest.mp3','audio/forest.mp3','AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav','audio/AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav'],
-'satie.mp3':['satie.mp3','audio/satie.mp3','Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg','audio/Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg'],
-'ambient.mp3':['ambient.mp3','audio/ambient.mp3','002_Synthwave_15k.mp3','audio/002_Synthwave_15k.mp3']
-};
-function probe(u){return fetch(u,{method:'HEAD'}).then(function(r){return r.ok?u:null;}).catch(function(){return null;});}
-function fixTrack(t){
-var cands=alts[t.url]||[t.url];
-var chain=Promise.resolve(null);
-cands.forEach(function(u){chain=chain.then(function(found){if(found)return found;return probe(u);});});
-return chain.then(function(found){if(found){t.url=found;return true;}return false;});
-}
-var jobs=[];var missing=[];
-a.categories.forEach(function(c){c.tracks.forEach(function(t){if(t.kind==='file'){jobs.push(fixTrack(t).then(function(ok){if(!ok)missing.push(t.name);}));}});});
-Promise.all(jobs).then(function(){saveState();if(missing.length){showToast('Δεν βρέθηκαν πουθενά: '+missing.join(', '));}else{showToast('Όλα τα αρχεία ήχου βρέθηκαν.');}});
-})();
-</script>  
   
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
