@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ρυθμός</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="app-version" content="1.3.0">
+<meta name="app-version" content="1.4.0">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -762,7 +762,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'️',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.3.0';
+var APP_VERSION='1.4.0';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -923,6 +923,35 @@ function audPrev(){var t=audPickTrack(state.audio.curCat,-1);if(t)audPlayTrack(s
 audNext=function(){var t=audPickTrack(state.audio.curCat,1);if(t)audPlayTrack(state.audio.curCat,t);};
 AUD_EL.addEventListener('ended',function(){if(!state.audio.loop){audNext();}});
 var _oaM=openAudioSheet;openAudioSheet=function(){_oaM();var bar=document.querySelector('#modalOverlay .aud-bar');if(bar&&!bar.querySelector('.aud-shuffle')){var b=document.createElement('button');b.type='button';b.className='aud-ico aud-shuffle'+(state.audio.shuffle?' playing':'');b.setAttribute('aria-label','Shuffle');b.innerHTML=SHUFFLE_SVG;b.onclick=function(){state.audio.shuffle=!state.audio.shuffle;saveState();b.classList.toggle('playing',state.audio.shuffle);showToast(state.audio.shuffle?'Shuffle ενεργό':'Shuffle ανενεργό');};bar.appendChild(b);}};
+</script>
+
+<script>
+state.sleep=state.sleep||{asleep:false,startedAt:null,hours:{}};
+state.reviews=state.reviews||{};
+state.reviewAsk=state.reviewAsk||'';
+function sleepTodayMin(){var sl=state.sleep;var k=getDailyPlanKey();var h=(sl.hours&&sl.hours[k])?sl.hours[k]:0;if(sl.asleep&&sl.startedAt){h+=(Date.now()-Math.max(sl.startedAt,startOfDay()))/3600000;}return h*60;}
+function sleepSleep(){state.sleep.asleep=true;state.sleep.startedAt=Date.now();saveState();render();}
+function sleepWake(){var sl=state.sleep;if(!sl.asleep)return;var k=getDailyPlanKey();sl.hours[k]=(sl.hours[k]||0)+(Date.now()-sl.startedAt)/3600000;sl.asleep=false;sl.startedAt=null;saveState();render();}
+function sleepManual(){var d=prompt('Ημερομηνία (YYYY-MM-DD):',getDailyPlanKey());if(!d)return;var h=prompt('Ώρες ύπνου:',state.settings.sleepHours);if(!h)return;state.sleep.hours[d]=clamp(parseFloat(h)||0,0,24);saveState();render();}
+function sleepCardHTML(){var sl=state.sleep;var today=sleepTodayMin();var target=state.settings.sleepHours*60;var pct=target?clamp(today/target*100,0,100):0;
+return '<div class="card"><h3>Ύπνος</h3><div class="metrics"><div class="metric"><span>Σήμερα</span><strong>'+fmtHM(today)+'</strong><div class="progress'+(today>target?' over':'')+'"><span style="width:'+pct+'%"></span></div><small>'+fmtHM(today)+' / '+fmtHM(target)+'</small></div><div class="metric"><span>Κατάσταση</span><strong>'+(sl.asleep?'Σε ύπνο':'Ξύπνιος')+'</strong><small>'+(sl.asleep?fmtClock(Date.now()-sl.startedAt):'—')+'</small></div></div><div class="actions">'+(sl.asleep?'<button class="btn btn-success" onclick="sleepWake()">Ξύπνησα</button>':'<button class="btn btn-primary" onclick="sleepSleep()">Πάω για ύπνο</button>')+'<button class="btn btn-ghost" onclick="sleepManual()">Χειροκίνητη καταχώρηση</button></div></div>';}
+function logsTodayHTML(){var s=startOfDay(),e=startOfNextDay();var idx=[];state.logs.forEach(function(L,i){if(L.end>s&&L.start<e)idx.push(i);});if(!idx.length)return '';
+var rows=idx.map(function(i){var L=state.logs[i];var nm=L.type==='course'?(state.courses.find(function(c){return c.id===L.id})||{name:'Μάθημα'}).name:(FIXED_DEFS.find(function(d){return d.id===L.id})||{name:'Δραστηριότητα'}).name;
+return '<div class="list-row"><div class="list-left"><strong>'+esc(nm)+'</strong><span class="muted">'+fmtClock(L.start-s)+' – '+fmtClock(Math.min(L.end,e)-s)+'</span></div><div class="list-value">'+fmtHM(L.dur)+'</div><button class="btn btn-ghost" onclick="logEdit('+i+')">✎</button><button class="btn btn-ghost-danger" onclick="logDel('+i+')">✕</button></div>';}).join('');
+return '<div class="card"><h3>Καταγραφές σήμερα</h3><div class="stack" style="margin-top:10px">'+rows+'</div></div>';}
+function logDel(i){confirmModal('Διαγραφή','Διαγραφή αυτής της καταγραφής;',function(){state.logs.splice(i,1);saveState();render();},'Διαγραφή');}
+function logEdit(i){var L=state.logs[i];var m=prompt('Νέα διάρκεια σε λεπτά:',Math.round(L.dur));if(!m)return;var mins=clamp(parseFloat(m)||0,1,1440);L.dur=mins;L.end=L.start+mins*60000;saveState();render();}
+function dayCompliant(ts){var s=startOfDay(ts),e=startOfNextDay(ts);return FIXED_DEFS.every(function(d){return totalMin('fixed',d.id,s,e)<=d.daily+0.5;});}
+function streakCount(){var day=86400000;var cur=startOfDay();if(!dayCompliant(cur))cur-=day;var n=0;while(n<365&&dayCompliant(cur)){n++;cur-=day;}return n;}
+var _rd=renderDay;renderDay=function(){return _rd()+sleepCardHTML()+logsTodayHTML();};
+var _ra=renderAnalysis;renderAnalysis=function(){return '<div class="card"><h3>Σερί συμμόρφωσης</h3><div class="stat-card"><div class="stat-value">'+streakCount()+' ημέρες</div><div class="stat-sub">διαδοχικές εντός ορίων</div></div></div>'+_ra();};
+setInterval(function(){var h=new Date().getHours();var key=getDailyPlanKey();if(h>=21&&!state.reviews[key]&&state.reviewAsk!==key&&!modalOpen){state.reviewAsk=key;saveState();var logged=allTotalMin(startOfDay(),startOfNextDay());
+openModal({title:'Απολογισμός ημέρας',body:'<p class="muted">Καταγραφή: '+fmtHM(logged)+'</p><p class="muted">Ύπνος: '+fmtHM(sleepTodayMin())+'</p><p class="muted" style="margin:10px 0 6px">Βαθμολόγησε τη μέρα:</p><div class="actions">'+[1,2,3,4,5].map(function(r){return '<button class="btn btn-ghost" onclick="rateDay('+r+')">'+r+'</button>';}).join('')+'</div>',buttons:[{text:'Παράλειψη',class:'btn-ghost'}]});}},60000);
+function rateDay(r){state.reviews[getDailyPlanKey()]=r;saveState();closeModal();showToast('Καταγράφηκε βαθμολογία '+r);}
+var _ss=safeSettings;safeSettings=function(){_ss();var p=document.getElementById('safePanel');if(p&&!p.querySelector('#impBtn')){var b=document.createElement('button');b.id='impBtn';b.textContent='Εισαγωγή backup';b.style.cssText='display:block;width:100%;margin-top:8px;padding:12px;border:none;border-radius:14px;background:#335533;color:#fff;font:700 .9rem system-ui,sans-serif';b.onclick=function(){var f=document.createElement('input');f.type='file';f.accept='.json';f.onchange=function(){var r=new FileReader();r.onload=function(){try{var j=JSON.parse(r.result);if(!j||!j.version||!Array.isArray(j.logs)){safeToast('Μη έγκυρο αρχείο.');return;}confirmModal('Εισαγωγή','Αντικατάσταση ΟΛΩΝ των δεδομένων με το αρχείο;',function(){localStorage.setItem(STORE_KEY,r.result);location.reload();},'Εισαγωγή');}catch(e){safeToast('Σφάλμα ανάγνωσης.');}};r.readAsText(f.files[0]);};p.appendChild(b);}};
+var _rac=renderActivities;renderActivities=function(){return _rac()+'<div class="section-title">Εξεταστική</div><div class="card">'+state.courses.filter(function(c){return c.active&&c.hours>0;}).map(function(c){return '<div class="list-row"><div class="list-left"><strong>'+esc(c.name)+'</strong></div><input type="date" style="width:auto" value="'+(c.examDate||'')+'" onchange="setExam(\''+c.id+'\',this.value)"></div>';}).join('')+'</div>';};
+function setExam(id,v){var c=state.courses.find(function(x){return x.id===id});if(!c)return;c.examDate=v;saveState();render();}
+var _ci=courseInfo;courseInfo=function(c){var r=_ci(c);if(c&&c.examDate&&r.remaining>0){var exS=startOfDay(new Date(c.examDate+'T12:00:00').getTime());var daysLeft=Math.round((exS-startOfDay())/86400000);if(daysLeft>=0&&daysLeft<=21){var act=0;for(var i=0;i<=daysLeft;i++){var wd=mondayIndex(startOfDay()+i*86400000);if(!(c.off||[]).includes(wd))act++;}var urg=1+0.5*(1-daysLeft/21);r.todayTarget=Math.min(r.remaining,Math.max(r.todayTarget,(r.remaining/Math.max(1,act))*urg));}}return r;};
 </script>
   
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
