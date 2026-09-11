@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ρυθμός</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="app-version" content="1.2.8">
+<meta name="app-version" content="1.2.9">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -762,7 +762,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'️',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.2.8';
+var APP_VERSION='1.2.9';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -925,6 +925,30 @@ p.innerHTML='<div style="width:100%;max-width:430px;background:#1e1e2e;color:#ff
 p.onclick=function(e){if(e.target===p)p.remove();};document.body.appendChild(p);}
 window.safeSettings=safeSettings;
 (function(){var sw=safeCtl();if(sw){try{sw.postMessage({type:'get-force'});}catch(e){}}if(navigator.serviceWorker&&navigator.serviceWorker.addEventListener){navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.type==='force-state'){window.__force=e.data.on;}});}})();
+</script>
+
+<script>
+var AUD_WAV={};
+function encodeWav(samples,sr){var n=samples.length;var buf=new ArrayBuffer(44+n*2);var v=new DataView(buf);function ws(o,s){for(var i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}ws(0,'RIFF');v.setUint32(4,36+n*2,true);ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,n*2,true);for(var i=0;i<n;i++){var s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(44+i*2,s<0?s*0x8000:s*0x7FFF,true);}return new Blob([buf],{type:'audio/wav'});}
+function makeNoiseWav(kind){var sr=22050,sec=6,n=sr*sec;var x=new Float32Array(n);var l=0;for(var i=0;i<n;i++){var w=Math.random()*2-1;if(kind==='sea'){l=(l+0.02*w)/1.02;x[i]=l*3.5;}else{x[i]=w*0.35;}}
+if(kind==='sea'){for(var i=0;i<n;i++){x[i]*=0.55+0.45*Math.sin(2*Math.PI*0.12*(i/sr));}}else{var y=0;for(var i=0;i<n;i++){y=0.7*y+0.3*x[i];x[i]=y;}}
+var f=Math.floor(sr*0.05);for(var i=0;i<f;i++){var g=i/f;x[i]*=g;x[n-1-i]*=g;}
+return encodeWav(x,sr);}
+function noiseStart(){return;}
+function noiseStop(){try{AUD_EL.pause();}catch(e){}}
+function audPlayTrack(catId,tr){var a=state.audio;if(a.volume<=0)a.volume=0.7;a.curCat=catId;a.curTrack=tr.id;a.playing=true;try{AUD_EL.pause();}catch(e){}
+var finish=function(url){try{AUD_EL.src=url;AUD_EL.volume=a.volume;AUD_EL.loop=true;AUD_EL.play().then(function(){showToast('Παίζει: '+tr.name);audInject();}).catch(function(e){showToast('Αποτυχία αναπαραγωγής ('+(e&&e.name?e.name:'σφάλμα')+'). Έλεγξε το media volume.');a.playing=false;audInject();});}catch(e){showToast('Σφάλμα ήχου.');a.playing=false;audInject();}};
+if(tr.kind==='noise'){if(!AUD_WAV[tr.id]){AUD_WAV[tr.id]=URL.createObjectURL(makeNoiseWav(tr.id));}finish(AUD_WAV[tr.id]);}
+else if(tr.kind==='local'){audGet(tr.key).then(function(b){if(!b){showToast('Το αρχείο δεν βρέθηκε στη συσκευή.');a.playing=false;audInject();return;}finish(URL.createObjectURL(b));});}
+else{finish(tr.url);}
+saveState();audInject();}
+function audTest(){var sr=22050,n=sr;var s=new Float32Array(n);for(var i=0;i<n;i++){var t=i/sr;var env=t<0.05?t/0.05:(t>0.95?(1-t)/0.05:1);s[i]=0.4*Math.sin(2*Math.PI*440*t)*env;}var u=URL.createObjectURL(encodeWav(s,sr));var t2=new Audio(u);t2.volume=(state.audio.volume>0?state.audio.volume:0.7);t2.play().then(function(){showToast('Δοκιμή: το μονοπάτι ήχου δουλεύει.');}).catch(function(e){showToast('Δοκιμή απέτυχε ('+(e&&e.name?e.name:'σφάλμα')+'). Το πρόβλημα είναι στη συσκευή ή στον browser.');});}
+function openAudioSheet(){ensureBuiltin();if(modalOpen){closeModal();}var a=state.audio;var cur=audFindTrack();
+var body='<div class="aud-bar"><button class="aud-ico '+(a.playing?'playing':'')+'" onclick="audToggle();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(a.playing?'<path d="M8 5v14"/><path d="M16 5v14"/>':'<path d="M7 4l12 8-12 8z"/>')+'</svg></button><button class="aud-ico" onclick="audNext();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8z"/><path d="M19 5v14"/></svg></button><input type="range" min="0" max="1" step="0.05" value="'+a.volume+'" onchange="audSetVol(parseFloat(this.value))"><button class="aud-ico" onclick="audStopAll();audReopen(openAudioSheet);">'+STOP_SVG+'</button><button class="aud-ico" onclick="audTest();" aria-label="Δοκιμή ήχου"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button><button class="aud-ico '+(a.loop?'playing':'')+'" onclick="state.audio.loop=!state.audio.loop;AUD_EL.loop=state.audio.loop;saveState();audReopen(openAudioSheet);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button></div>';
+body+='<p class="muted" style="margin:0 0 12px">'+(cur?('Παίζει: '+esc(cur.name)):'Τίποτα δεν παίζει.')+'</p>';
+body+=a.categories.map(function(c){return '<button class="aud-cat" onclick="audReopen(function(){openCategorySheet(\''+c.id+'\');})"><strong>'+esc(c.name)+'</strong><span>'+c.tracks.length+' ήχοι</span></button>';}).join('');
+body+='<div class="actions" style="margin-top:10px"><button class="btn btn-ghost" onclick="audNewCat()">Νέα κατηγορία</button></div>';
+openModal({title:'Ήχοι & κατηγορίες',body:body,buttons:[{text:'Κλείσιμο'}]});}
 </script>
   
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
