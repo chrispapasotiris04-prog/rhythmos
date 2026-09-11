@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ρυθμός</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="app-version" content="1.2.19">
+<meta name="app-version" content="1.3.0">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -762,7 +762,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'️',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.2.19';
+var APP_VERSION='1.3.0';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -908,6 +908,21 @@ p.onclick=function(e){if(e.target===p)p.remove();};document.body.appendChild(p);
 window.safeSettings=safeSettings;
 (function(){var sw=safeCtl();if(sw){try{sw.postMessage({type:'get-force'});}catch(e){}}if(navigator.serviceWorker&&navigator.serviceWorker.addEventListener){navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.type==='force-state'){window.__force=e.data.on;}});}})();
 ensureBuiltin();audNormalize();saveState();
+</script>
+
+<script>
+if(typeof state.audio.shuffle==='undefined'){state.audio.shuffle=false;saveState();}
+var SHUFFLE_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>';
+function audCatName(catId){var c=state.audio.categories.find(function(x){return x.id===catId;});return c?c.name:'Ρυθμός';}
+function audSetMedia(tr,catId){if(!('mediaSession' in navigator))return;try{navigator.mediaSession.metadata=new MediaMetadata({title:tr.name,artist:audCatName(catId),album:'Ρυθμός'});navigator.mediaSession.playbackState='playing';navigator.mediaSession.setActionHandler('play',function(){audToggle();});navigator.mediaSession.setActionHandler('pause',function(){audToggle();});navigator.mediaSession.setActionHandler('previoustrack',function(){audPrev();});navigator.mediaSession.setActionHandler('nexttrack',function(){audNext();});}catch(e){}}
+function audSetPlayback(st){if(!('mediaSession' in navigator))return;try{navigator.mediaSession.playbackState=st;}catch(e){}}
+var _apM=audPlayTrack;audPlayTrack=function(catId,tr){_apM(catId,tr);audSetMedia(tr,catId);};
+var _atM=audToggle;audToggle=function(){_atM();audSetPlayback(state.audio.playing?'playing':'paused');};
+function audPickTrack(catId,dir){var a=state.audio;var c=a.categories.find(function(x){return x.id===catId;});if(!c||!c.tracks.length)return null;var i=c.tracks.findIndex(function(x){return x.id===a.curTrack});var n;if(a.shuffle&&c.tracks.length>1){do{n=Math.floor(Math.random()*c.tracks.length);}while(n===i);}else{n=(i+dir+c.tracks.length)%c.tracks.length;}return c.tracks[n];}
+function audPrev(){var t=audPickTrack(state.audio.curCat,-1);if(t)audPlayTrack(state.audio.curCat,t);}
+audNext=function(){var t=audPickTrack(state.audio.curCat,1);if(t)audPlayTrack(state.audio.curCat,t);};
+AUD_EL.addEventListener('ended',function(){if(!state.audio.loop){audNext();}});
+var _oaM=openAudioSheet;openAudioSheet=function(){_oaM();var bar=document.querySelector('#modalOverlay .aud-bar');if(bar&&!bar.querySelector('.aud-shuffle')){var b=document.createElement('button');b.type='button';b.className='aud-ico aud-shuffle'+(state.audio.shuffle?' playing':'');b.setAttribute('aria-label','Shuffle');b.innerHTML=SHUFFLE_SVG;b.onclick=function(){state.audio.shuffle=!state.audio.shuffle;saveState();b.classList.toggle('playing',state.audio.shuffle);showToast(state.audio.shuffle?'Shuffle ενεργό':'Shuffle ανενεργό');};bar.appendChild(b);}};
 </script>
   
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
