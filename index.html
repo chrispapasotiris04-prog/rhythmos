@@ -912,17 +912,6 @@ _play(catId,tr);
 </script>
 
 <script>
-(function(){var a=state.audio;if(!a)return;
-var urlmap={'AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav':'forest.mp3','audio/AMBForst_Forest%20(ID%200100)_BigSoundBank.com.wav':'forest.mp3','Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg':'satie.mp3','audio/Erik_Satie_-_gymnopedies_-_la_1_ere._lent_et_douloureux.ogg':'satie.mp3','002_Synthwave_15k.mp3':'ambient.mp3','audio/002_Synthwave_15k.mp3':'ambient.mp3','rain.mp3':'forest.mp3','gymnopedie.mp3':'satie.mp3','audio/forest.mp3':'forest.mp3','audio/satie.mp3':'satie.mp3','audio/ambient.mp3':'ambient.mp3'};
-var byid={'forest-file':'forest.mp3','rain-file':'forest.mp3','gymnopedie':'satie.mp3','ambient1':'ambient.mp3'};
-var names={'forest.mp3':'Δάσος (ηχογράφηση)','satie.mp3':'Gymnopédie No. 1 — Satie','ambient.mp3':'Calm Ambient'};
-a.categories.forEach(function(c){c.tracks.forEach(function(t){if(t.kind!=='file')return;if(urlmap[t.url])t.url=urlmap[t.url];else if(byid[t.id])t.url=byid[t.id];if(names[t.url])t.name=names[t.url];});});
-var seen={};a.categories.slice().forEach(function(c){if(seen[c.name]){var keep=seen[c.name];c.tracks.forEach(function(t){if(!keep.tracks.find(function(x){return x.id===t.id;}))keep.tracks.push(t);});a.categories=a.categories.filter(function(x){return x!==c;});if(a.curCat===c.id)a.curCat=keep.id;}else{seen[c.name]=c;}});
-a.categories.forEach(function(c){var u={};c.tracks=c.tracks.filter(function(t){var k=(t.kind==='file')?t.url:t.id;if(u[k])return false;u[k]=1;return true;});});
-saveState();})();
-</script>
-
-<script>
 (function(){
 var a=state.audio;if(!a)return;
 var alts={
