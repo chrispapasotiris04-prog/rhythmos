@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ρυθμός</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="app-version" content="1.4.1">
+<meta name="app-version" content="1.4.2">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -762,7 +762,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'️',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.1';
+var APP_VERSION='1.4.2';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -943,17 +943,54 @@ function logDel(i){confirmModal('Διαγραφή','Διαγραφή αυτής 
 function logEdit(i){var L=state.logs[i];var m=prompt('Νέα διάρκεια σε λεπτά:',Math.round(L.dur));if(!m)return;var mins=clamp(parseFloat(m)||0,1,1440);L.dur=mins;L.end=L.start+mins*60000;saveState();render();}
 function dayCompliant(ts){var s=startOfDay(ts),e=startOfNextDay(ts);return FIXED_DEFS.every(function(d){return totalMin('fixed',d.id,s,e)<=d.daily+0.5;});}
 function streakCount(){var day=86400000;var cur=startOfDay();if(!dayCompliant(cur))cur-=day;var n=0;while(n<365&&dayCompliant(cur)){n++;cur-=day;}return n;}
-var _rd=renderDay;renderDay=function(){return _rd()+sleepCardHTML()+logsTodayHTML();};
-var _ra=renderAnalysis;renderAnalysis=function(){return '<div class="card"><h3>Σερί συμμόρφωσης</h3><div class="stat-card"><div class="stat-value">'+streakCount()+' ημέρες</div><div class="stat-sub">διαδοχικές εντός ορίων</div></div></div>'+_ra();};
 setInterval(function(){var h=new Date().getHours();var key=getDailyPlanKey();if(h>=21&&!state.reviews[key]&&state.reviewAsk!==key&&!modalOpen){state.reviewAsk=key;saveState();var logged=allTotalMin(startOfDay(),startOfNextDay());
 openModal({title:'Απολογισμός ημέρας',body:'<p class="muted">Καταγραφή: '+fmtHM(logged)+'</p><p class="muted">Ύπνος: '+fmtHM(sleepTodayMin())+'</p><p class="muted" style="margin:10px 0 6px">Βαθμολόγησε τη μέρα:</p><div class="actions">'+[1,2,3,4,5].map(function(r){return '<button class="btn btn-ghost" onclick="rateDay('+r+')">'+r+'</button>';}).join('')+'</div>',buttons:[{text:'Παράλειψη',class:'btn-ghost'}]});}},60000);
 function rateDay(r){state.reviews[getDailyPlanKey()]=r;saveState();closeModal();showToast('Καταγράφηκε βαθμολογία '+r);}
 var _ss=safeSettings;safeSettings=function(){_ss();var p=document.getElementById('safePanel');if(p&&!p.querySelector('#impBtn')){var b=document.createElement('button');b.id='impBtn';b.textContent='Εισαγωγή backup';b.style.cssText='display:block;width:100%;margin-top:8px;padding:12px;border:none;border-radius:14px;background:#335533;color:#fff;font:700 .9rem system-ui,sans-serif';b.onclick=function(){var f=document.createElement('input');f.type='file';f.accept='.json';f.onchange=function(){var r=new FileReader();r.onload=function(){try{var j=JSON.parse(r.result);if(!j||!j.version||!Array.isArray(j.logs)){safeToast('Μη έγκυρο αρχείο.');return;}confirmModal('Εισαγωγή','Αντικατάσταση ΟΛΩΝ των δεδομένων με το αρχείο;',function(){localStorage.setItem(STORE_KEY,r.result);location.reload();},'Εισαγωγή');}catch(e){safeToast('Σφάλμα ανάγνωσης.');}};r.readAsText(f.files[0]);};p.appendChild(b);}};
-var _rac=renderActivities;renderActivities=function(){return _rac()+'<div class="section-title">Εξεταστική</div><div class="card">'+state.courses.filter(function(c){return c.active&&c.hours>0;}).map(function(c){return '<div class="list-row"><div class="list-left"><strong>'+esc(c.name)+'</strong></div><input type="date" style="width:auto" value="'+(c.examDate||'')+'" onchange="setExam(\''+c.id+'\',this.value)"></div>';}).join('')+'</div>';};
 function setExam(id,v){var c=state.courses.find(function(x){return x.id===id});if(!c)return;c.examDate=v;saveState();render();}
 var _ci=courseInfo;courseInfo=function(c){var r=_ci(c);if(c&&c.examDate&&r.remaining>0){var exS=startOfDay(new Date(c.examDate+'T12:00:00').getTime());var daysLeft=Math.round((exS-startOfDay())/86400000);if(daysLeft>=0&&daysLeft<=21){var act=0;for(var i=0;i<=daysLeft;i++){var wd=mondayIndex(startOfDay()+i*86400000);if(!(c.off||[]).includes(wd))act++;}var urg=1+0.5*(1-daysLeft/21);r.todayTarget=Math.min(r.remaining,Math.max(r.todayTarget,(r.remaining/Math.max(1,act))*urg));}}return r;};
-render();
 </script>
+
+function examCardHTML(){
+var rows=state.courses.filter(function(c){return c.active&&c.hours>0;}).map(function(c){
+return '<div class="list-row"><div class="list-left"><strong>'+esc(c.name)+'</strong></div><input type="date" style="width:auto" value="'+(c.examDate||'')+'" onchange="setExam(\''+c.id+'\',this.value)"></div>';
+}).join('');
+return '<div id="exam-card-extra"><div class="section-title">Εξεταστική</div><div class="card">'+(rows||'<p class="muted">Κανένα ενεργό μάθημα.</p>')+'</div></div>';
+}
+
+function sleepExtrasMount(){
+var main=document.querySelector('main');
+if(!main)return;
+
+var active=document.querySelector('.nav-btn.active');
+var label=active?active.textContent:'';
+
+if(label.indexOf('Ημέρα')>=0){
+ if(!document.getElementById('sleep-card-extra')){
+  main.insertAdjacentHTML('beforeend','<div id="sleep-card-extra">'+sleepCardHTML()+logsTodayHTML()+'</div>');
+ }
+}
+
+if(label.indexOf('Ανάλυση')>=0){
+ if(!document.getElementById('streak-card-extra')){
+  main.insertAdjacentHTML('afterbegin','<div id="streak-card-extra"><div class="card"><h3>Σερί συμμόρφωσης</h3><div class="stat-card"><div class="stat-value">'+streakCount()+' ημέρες</div><div class="stat-sub">διαδοχικές εντός ορίων</div></div></div></div>');
+ }
+}
+
+if(label.indexOf('Δραστηριότητες')>=0){
+ if(!document.getElementById('exam-card-extra')){
+  main.insertAdjacentHTML('beforeend',examCardHTML());
+ }
+}
+}
+
+var _renderSleepExtras=render;
+render=function(){
+ _renderSleepExtras();
+ setTimeout(sleepExtrasMount,0);
+};
+
+render();  
   
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
