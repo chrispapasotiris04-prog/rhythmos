@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.12">
+<meta name="app-version" content="1.4.13">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -718,7 +718,9 @@ function renderSettings(){
   <div class="section-title">Εβδομάδα</div>
 <div class="card"><h3>Πλάνο 24 ωρών</h3>${budgetPanelHTML(budgetSnapshot(state.courses,FIXED_DEFS,state.settings.sleepHours))}</div>
   <div class="card"><div class="plan-row"><span>Σύνολο</span><strong>168ω</strong></div><div class="plan-row"><span>Ύπνος</span><strong>${fmtHM(sleepWeek)}</strong></div><div class="plan-row"><span>Δραστηριότητες</span><strong>${fmtHM(planned)}</strong></div><div class="plan-row"><span>Ελεύθερος</span><strong class="${freeWeek<0?'text-danger':'text-success'}">${fmtHM(freeWeek)}</strong></div></div>
-  <div class="section-title">Δεδομένα</div>
+  <div class="section-title">Ασφάλεια</div>
+<div class="card"><div class="setting-row"><div><strong>Πίνακας ασφαλούς λειτουργίας</strong><span class="muted">Επαναφορά στο backup, επιστροφή στην τελευταία έκδοση, εξαγωγή δεδομένων.</span></div><button class="btn btn-ghost" onclick="safeSettings()">Άνοιγμα</button></div></div>
+<div class="section-title">Δεδομένα</div>
   <div class="card"><div class="actions"><button class="btn btn-ghost" onclick="resetSemester()">Νέο εξάμηνο</button><button class="btn btn-warn" onclick="clearWeekLogs()">Μηδενισμός εβδομάδας</button><button class="btn btn-ghost-danger" onclick="clearAllData()">Επαναφορά</button></div></div>`;
 }
 
@@ -809,7 +811,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.12';
+var APP_VERSION='1.4.13';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
