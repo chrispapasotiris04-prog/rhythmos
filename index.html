@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.5">
+<meta name="app-version" content="1.4.6">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -769,7 +769,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.5';
+var APP_VERSION='1.4.6';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -947,9 +947,9 @@ var rows=idx.map(function(i){var L=state.logs[i];var nm=L.type==='course'?(state
 return '<div class="list-row"><div class="list-left"><strong>'+esc(nm)+'</strong><span class="muted">'+fmtClock(L.start-s)+' – '+fmtClock(Math.min(L.end,e)-s)+'</span></div><div class="list-value">'+fmtHM(L.dur)+'</div><button class="btn btn-ghost" onclick="logEdit('+i+')">✎</button><button class="btn btn-ghost-danger" onclick="logDel('+i+')">✕</button></div>';}).join('');
 return '<div class="card"><h3>Καταγραφές σήμερα</h3><div class="stack" style="margin-top:10px">'+rows+'</div></div>';}
 function logDel(i){var L=state.logs[i];if(!L)return;confirmModal('Διαγραφή','Διαγραφή αυτής της καταγραφής;',function(){var k=state.logs.indexOf(L);if(k>-1)state.logs.splice(k,1);saveState();render();},'Διαγραφή');}
-function logEdit(i){var L=state.logs[i];var m=prompt('Νέα διάρκεια σε λεπτά:',Math.round(L.dur));if(!m)return;var mins=clamp(parseFloat(m)||0,1,1440);L.dur=mins;L.end=L.start+mins*60000;saveState();render();}
+function logEdit(i){var L=state.logs[i];if(!L)return;var m=prompt('Νέα διάρκεια σε λεπτά:',Math.round(L.dur));if(!m)return;var mins=clamp(parseFloat(m)||0,1,1440);L.dur=mins;L.end=L.start+mins*60000;saveState();render();}
 function dayCompliant(ts){var s=startOfDay(ts),e=startOfNextDay(ts);return FIXED_DEFS.every(function(d){return totalMin('fixed',d.id,s,e)<=d.daily+0.5;});}
-function streakCount(){var day=86400000;var cur=startOfDay();if(!dayCompliant(cur))cur-=day;var n=0;var n=0;while(n<60&&dayCompliant(cur)){n++;cur-=day;}return n;}
+function streakCount(){var day=86400000;var cur=startOfDay();if(!dayCompliant(cur))cur-=day;var n=0;while(n<60&&dayCompliant(cur)){n++;cur-=day;}return n;}
 setInterval(function(){var h=new Date().getHours();var key=getDailyPlanKey();if(h>=21&&!state.reviews[key]&&state.reviewAsk!==key&&!modalOpen){state.reviewAsk=key;saveState();var logged=allTotalMin(startOfDay(),startOfNextDay());
 openModal({title:'Απολογισμός ημέρας',body:'<p class="muted">Καταγραφή: '+fmtHM(logged)+'</p><p class="muted">Ύπνος: '+fmtHM(sleepTodayMin())+'</p><p class="muted" style="margin:10px 0 6px">Βαθμολόγησε τη μέρα:</p><div class="actions">'+[1,2,3,4,5].map(function(r){return '<button class="btn btn-ghost" onclick="rateDay('+r+')">'+r+'</button>';}).join('')+'</div>',buttons:[{text:'Παράλειψη',class:'btn-ghost'}]});}},60000);
 function rateDay(r){state.reviews[getDailyPlanKey()]=r;saveState();closeModal();showToast('Καταγράφηκε βαθμολογία '+r);}
