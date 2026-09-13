@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.7">
+<meta name="app-version" content="1.4.8">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -312,7 +312,7 @@ const MONTH_GEN=['Ιανουαρίου','Φεβρουαρίου','Μαρτίου
 const TAB_TITLES={day:'Ημέρα',activities:'Δραστηριότητες',schedule:'Πρόγραμμα',analysis:'Ανάλυση',settings:'Ρυθμίσεις'};
 const RELAX_WEEK=270;
 
-const FIXED_DEFS=[
+const SEED_FIXED=[
   {id:'gym',name:'Γυμναστήριο',short:'Γ',color:'#ff8a65',color2:'#ff5e62',daily:132,weekly:528,target:4,desc:'Με επιστροφή και καθαρισμό.',timeRange:[7,21]},
   {id:'school',name:'Σχολή / Μετακίνηση',short:'Σ',color:'#60a5fa',color2:'#4f46e5',daily:360,weekly:720,target:2,desc:'2 ημέρες των 6 ωρών.',timeRange:[8,20]},
   {id:'mealprep',name:'Meal prep & καθαρισμός',short:'Μ',color:'#34d399',color2:'#059669',daily:420,weekly:420,target:1,desc:'Ημερήσιο και εβδομαδιαίο όριο ταυτίζονται.',timeRange:[9,18]},
@@ -322,7 +322,7 @@ const FIXED_DEFS=[
   {id:'reading',name:'Διάβασμα βιβλίου',short:'Δ',color:'#8b5cf6',color2:'#6366f1',daily:30,weekly:210,target:7,hard:true,desc:'Πριν τον ύπνο. Σκληρό όριο 30 λεπτά.',timeRange:[20,24]},
   {id:'relax',name:'Χαλάρωση',short:'Χ',color:'#f472b6',color2:'#ec4899',daily:RELAX_WEEK/7,weekly:RELAX_WEEK,target:0,hard:true,desc:'Ημερήσιο όριο από το εβδομαδιαίο 4,5 ωρών.',timeRange:[18,24]}
 ];
-const MONTHLY_DEFS=[{id:'outing1',name:'Έξοδος 1',hours:5},{id:'outing2',name:'Έξοδος 2',hours:5},{id:'cinema',name:'Ταινία στο σινεμά',hours:3.5}];
+const SEED_MONTHLY=[{id:'outing1',name:'Έξοδος 1',hours:5},{id:'outing2',name:'Έξοδος 2',hours:5},{id:'cinema',name:'Ταινία στο σινεμά',hours:3.5}];
 const DEFAULT_COURSES=[
   {id:'osy',name:'Οργάνωση Συστημάτων Υπολογιστών',hours:10,off:[0,1],type:'core',active:true,color:'#4f8cff',color2:'#3b82f6'},
   {id:'qm1',name:'Κβαντική Μηχανική 1',hours:10,off:[2,3],type:'core',active:true,color:'#8b5cf6',color2:'#7c3aed'},
@@ -804,7 +804,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.7';
+var APP_VERSION='1.4.8';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
