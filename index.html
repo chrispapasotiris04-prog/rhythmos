@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.8">
+<meta name="app-version" content="1.4.9">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -780,6 +780,8 @@ openModal({title:def?'Επεξεργασία δραστηριότητας':'Νέ
 const name=sheet.querySelector('#fName').value.trim();const short=sheet.querySelector('#fShort').value.trim()||name.charAt(0)||'Ν';
 const daily=clamp(parseInt(sheet.querySelector('#fDaily').value)||60,5,1440);const weekly=clamp(parseInt(sheet.querySelector('#fWeekly').value)||daily,5,10080);
 const target=clamp(parseInt(sheet.querySelector('#fTarget').value)||0,0,21);const from=clamp(parseInt(sheet.querySelector('#fFrom').value)||0,0,24);let to=clamp(parseInt(sheet.querySelector('#fTo').value)||24,0,24);if(to<=from)to=Math.min(24,from+1);
+if(weekly<daily){err.textContent='Το εβδομαδιαίο όριο δεν μπορεί να είναι μικρότερο από το ημερήσιο.';err.classList.add('show');return false;}
+if(target>0&&target*daily>weekly){err.textContent='Στόχος επί ημερήσιο όριο ξεπερνά το εβδομαδιαίο.';err.classList.add('show');return false;}
 if(!name){err.textContent='Δώσε όνομα.';err.classList.add('show');return false;}
 const trialDefs=def?FIXED_DEFS.map(x=>x.id===def.id?{...x,daily,weekly}:x):FIXED_DEFS.concat([{id:'__tmp',daily,weekly}]);const snapF=budgetSnapshot(state.courses,trialDefs,state.settings.sleepHours);if(budgetBad(snapF)){err.textContent='Τα όρια ξεπερνούν τις 24 ώρες ημέρας ή εβδομάδας. Μείωσέ τα.';err.classList.add('show');return false;}                                                                                                                                                                                      
 const data={name,short,desc:sheet.querySelector('#fDesc').value.trim(),color:sheet.querySelector('#fColor').value,color2:sheet.querySelector('#fColor2').value,daily,weekly,target,hard,timeRange:[from,to]};
@@ -807,7 +809,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.8';
+var APP_VERSION='1.4.9';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
