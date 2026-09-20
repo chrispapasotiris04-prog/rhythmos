@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.11">
+<meta name="app-version" content="1.4.17">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -461,7 +461,7 @@ function eligibleCoursesToday(){
 }
 function openPomodoroSetup(){
   const p=P();const pm=PM();
-  if(p.phase){pushAlert({title:'Τρέχει ήδη pomodoro',message:'Τερμάτισε το τρέχον πριν ξεκινήσεις νέο.',buttons:[{text:'Εντάξει'}]});return;}
+  if(p.phase){openModal({title:'Τρέχει ήδη pomodoro',message:'Υπάρχει κύκλος σε φάση «'+(p.phase==='focus'?'Focus':p.phase==='break'?'Διάλειμμα':p.phase==='longbreak'?'Μεγάλο διάλειμμα':'Αναμονή νέου κύκλου')+'». Διάλεξε τι θες να κάνεις.',buttons:[{text:'Άνοιγμα κύκλου',class:'btn-primary',onClick:function(){openFocusOverlay();}},{text:'Τερματισμός & νέος',class:'btn-stop',onClick:function(){abortPomodoro(true);openPomodoroSetup();}},{text:'Άκυρο',class:'btn-ghost'}]});return;}
   const eligible=eligibleCoursesToday();
   const opts=[];
   /* Τελευταία επιλογή μόνο αν είναι μάθημα και παραμένει επιλέξιμο σήμερα */
@@ -555,11 +555,11 @@ function updateFocusOverlay(force){
   }
 }
 function updateFocusBadge(){
-  const b=$('#focusBadge');if(!b)return;const p=P();
-  if(p.phase==='focus'||p.phase==='break'||p.phase==='longbreak'){
-    b.textContent=(p.phase==='focus'?'🎯 ':'☕ ')+fmtClock(pomoPhaseRemaining());
-    b.classList.remove('hidden');
-  }else b.classList.add('hidden');
+const b=$('#focusBadge');if(!b)return;const p=P();
+if(p.phase){
+b.textContent=(p.phase==='focus'?'🎯 ':(p.phase==='break'||p.phase==='longbreak')?'☕ ':' ')+(p.phase==='proposal'?'νέος κύκλος;':fmtClock(pomoPhaseRemaining()));
+b.classList.remove('hidden');
+}else b.classList.add('hidden');
 }
 
 /* ===== RENDER ===== */
@@ -694,7 +694,7 @@ function renderSettings(){
   <div class="section-title">Focus & Pomodoro</div>
   <div class="card">
     <div class="setting-row"><div><strong>Καθαρό UI στη μελέτη</strong><span class="muted">Κρύβει quick actions & προτάσεις. Ενεργοποιείται αυτόματα κατά το focus.</span></div><button class="switch ${focusMode?'on':''}" onclick="toggleFocusMode()"></button></div>
-    <div class="setting-row"><div><strong>Ρυθμίσεις Pomodoro</strong><span class="muted">Focus ${pm.focusMin}λ · Διάλειμμα ${pm.breakMin}λ · Μεγάλο ${pm.longBreakMin}λ</span></div><button class="btn btn-primary" onclick="openPomodoroSetup()">Νέος κύκλος</button></div>
+    <div class="setting-row"><div><strong>Ρυθμίσεις Pomodoro</strong><span class="muted">Focus ${pm.focusMin}λ · Διάλειμμα ${pm.breakMin}λ · Μεγάλο ${pm.longBreakMin}λ</span></div>${P().phase?`<button class="btn btn-stop" onclick="abortPomodoro()">Τερματισμός</button>`:''}<button class="btn btn-primary" onclick="openPomodoroSetup()">Νέος κύκλος</button></div>
     <p class="note">Ο κύκλος καταγράφει τον χρόνο αυτόματα στο μάθημα που θα επιλέξεις. Μετά από 4 κύκλους προτείνεται μεγάλο διάλειμμα.</p>
   </div>
   <div class="section-title">Onboarding</div>
@@ -718,7 +718,9 @@ function renderSettings(){
   <div class="section-title">Εβδομάδα</div>
 <div class="card"><h3>Πλάνο 24 ωρών</h3>${budgetPanelHTML(budgetSnapshot(state.courses,FIXED_DEFS,state.settings.sleepHours))}</div>
   <div class="card"><div class="plan-row"><span>Σύνολο</span><strong>168ω</strong></div><div class="plan-row"><span>Ύπνος</span><strong>${fmtHM(sleepWeek)}</strong></div><div class="plan-row"><span>Δραστηριότητες</span><strong>${fmtHM(planned)}</strong></div><div class="plan-row"><span>Ελεύθερος</span><strong class="${freeWeek<0?'text-danger':'text-success'}">${fmtHM(freeWeek)}</strong></div></div>
-  <div class="section-title">Δεδομένα</div>
+  <div class="section-title">Ασφάλεια</div>
+<div class="card"><div class="setting-row"><div><strong>Πίνακας ασφαλούς λειτουργίας</strong><span class="muted">Επαναφορά στο backup, επιστροφή στην τελευταία έκδοση, εξαγωγή δεδομένων.</span></div><button class="btn btn-ghost" onclick="safeSettings()">Άνοιγμα</button></div></div>
+<div class="section-title">Δεδομένα</div>
   <div class="card"><div class="actions"><button class="btn btn-ghost" onclick="resetSemester()">Νέο εξάμηνο</button><button class="btn btn-warn" onclick="clearWeekLogs()">Μηδενισμός εβδομάδας</button><button class="btn btn-ghost-danger" onclick="clearAllData()">Επαναφορά</button></div></div>`;
 }
 
@@ -809,7 +811,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.11';
+var APP_VERSION='1.4.17';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -843,6 +845,7 @@ function runUpdateCheck(){
   });
 }
   
+(function(){var p=P();var now=Date.now();if((p.phase==='focus'||p.phase==='break'||p.phase==='longbreak')&&now-p.phaseEndsAt>3600000){p.phase='proposal';p.phaseEndsAt=0;saveState();}})();
 applyUi();render();setInterval(tick,1000);
 
 setTimeout(function(){try{if(navigator.serviceWorker&&navigator.serviceWorker.controller)navigator.serviceWorker.controller.postMessage({type:'mark-good'});}catch(e){}},2000);  
@@ -946,11 +949,11 @@ function safeCtl(){return (navigator.serviceWorker&&navigator.serviceWorker.cont
 function safeSetForce(on,then){var sw=safeCtl();if(!sw){safeToast('Χωρίς ενεργό service worker.');if(then)then();return;}var done=false;function onMsg(e){if(e.data&&e.data.type==='force-written'){done=true;navigator.serviceWorker.removeEventListener('message',onMsg);if(then)then();}}navigator.serviceWorker.addEventListener('message',onMsg);try{sw.postMessage({type:'set-force',on:!!on});}catch(e){}setTimeout(function(){if(!done){navigator.serviceWorker.removeEventListener('message',onMsg);if(then)then();}},1500);}
 function safeToast(m){var t=document.getElementById('safeToast');if(!t){t=document.createElement('div');t.id='safeToast';t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#202748;color:#fff;padding:10px 16px;border-radius:999px;font:700 .84rem system-ui,sans-serif;z-index:400;transition:opacity .3s';document.body.appendChild(t);}t.textContent=m;t.style.opacity='1';setTimeout(function(){t.style.opacity='0';},2200);}
 function safeExport(){try{var raw=localStorage.getItem('rhythmos_time_app_v4');if(!raw){safeToast('Δεν βρέθηκαν δεδομένα.');return;}var b=new Blob([raw],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');var d=new Date();a.href=u;a.download='rhythmos-backup-'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1500);safeToast('Το αντίγραφο κατέβηκε.');}catch(e){safeToast('Αποτυχία εξαγωγής.');}}
-function safeRollback(){var sw=safeCtl();if(!sw){safeToast('Χωρίς ενεργό SW η επαναφορά δεν γίνεται.');return;}safeSetForce(true,function(){location.reload();});}
+function safeRollback(){var sw=safeCtl();if(!sw){safeToast('Χωρίς ενεργό service worker η επαναφορά δεν γίνεται: το sw.js είναι σπασμένο ή μη εγγεγραμμένο.');return;}safeSetForce(true,function(){location.reload();});}
 function safeRetryLatest(){safeSetForce(false,function(){location.reload();});}
 function safeSettings(){var old=document.getElementById('safePanel');if(old)old.remove();var v='άγνωστη';try{var m=document.documentElement.outerHTML.match(/name="app-version"\s+content="([^"]+)"/);if(m)v=m[1];}catch(e){}
-var p=document.createElement('div');p.id='safePanel';p.style.cssText='position:fixed;inset:0;z-index:390;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center';
-p.innerHTML='<div style="width:100%;max-width:430px;background:#1e1e2e;color:#fff;border-radius:28px 28px 0 0;padding:18px 18px 26px;font-family:system-ui,sans-serif"><h3 style="margin:0 0 6px;font-size:1.1rem">Ασφαλής λειτουργία</h3><p style="margin:0 0 14px;font-size:.82rem;opacity:.75">Έκδοση αρχείου: '+v+'. Αυτός ο πίνακας λειτουργεί ακόμα κι αν η εφαρμογή έχει σπάσει.</p><button style="display:block;width:100%;margin-bottom:8px;padding:12px;border:none;border-radius:14px;background:#6366f1;color:#fff;font:700 .9rem system-ui,sans-serif" onclick="safeRollback()">Επαναφορά στην τελευταία λειτουργική έκδοση</button><button style="display:block;width:100%;margin-bottom:8px;padding:12px;border:none;border-radius:14px;background:#333a55;color:#fff;font:700 .9rem system-ui,sans-serif" onclick="safeRetryLatest()">Δοκίμασε ξανά την τελευταία έκδοση</button><button style="display:block;width:100%;margin-bottom:8px;padding:12px;border:none;border-radius:14px;background:#333a55;color:#fff;font:700 .9rem system-ui,sans-serif" onclick="safeExport()">Εξαγωγή δεδομένων (backup)</button><button style="display:block;width:100%;padding:12px;border:none;border-radius:14px;background:#553333;color:#fff;font:700 .9rem system-ui,sans-serif" onclick="document.getElementById(\'safePanel\').remove()">Κλείσιμο</button></div>';
+var on=window.__force===true;var p=document.createElement('div');p.id='safePanel';p.style.cssText='position:fixed;inset:0;z-index:390;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center';
+p.innerHTML='<div style="width:100%;max-width:430px;background:#1e1e2e;color:#fff;border-radius:28px 28px 0 0;padding:18px 18px 26px;font-family:system-ui,sans-serif"><h3 style="margin:0 0 6px;font-size:1.1rem">Ασφαλής λειτουργία</h3><p style="margin:0 0 14px;font-size:.82rem;opacity:.75">Έκδοση αρχείου: '+v+'. Αυτός ο πίνακας λειτουργεί ακόμα κι αν η εφαρμογή έχει σπάσει.</p><p style="margin:0 0 14px;font-size:.82rem;font-weight:700;color:'+(on?'#fbbf24':'#34d399')+'">Τρέχει τώρα: '+(on?'ΑΝΤΙΓΡΑΦΟ ΑΣΦΑΛΕΙΑΣ (good/)':'ΖΩΝΤΑΝΗ ΕΚΔΟΣΗ (server)')+'</p><button style="display:block;width:100%;margin-bottom:8px;padding:12px;border:none;border-radius:14px;background:#6366f1;color:#fff;font:700 .9rem system-ui,sans-serif" onclick="safeRollback()">Επαναφορά από το backup (good/)</button><button style="display:block;width:100%;margin-bottom:8px;padding:12px;border:none;border-radius:14px;background:#333a55;color:#fff;font:700 .9rem system-ui,sans-serif" onclick="safeRetryLatest()">Δοκίμασε ξανά τη ζωντανή έκδοση (έξοδος από το backup)</button><button style="display:block;width:100%;margin-bottom:8px;padding:12px;border:none;border-radius:14px;background:#333a55;color:#fff;font:700 .9rem system-ui,sans-serif" onclick="safeExport()">Εξαγωγή δεδομένων (backup)</button><button style="display:block;width:100%;padding:12px;border:none;border-radius:14px;background:#553333;color:#fff;font:700 .9rem system-ui,sans-serif" onclick="document.getElementById(\'safePanel\').remove()">Κλείσιμο</button></div>';
 p.onclick=function(e){if(e.target===p)p.remove();};document.body.appendChild(p);}
 window.safeSettings=safeSettings;
 (function(){var sw=safeCtl();if(sw){try{sw.postMessage({type:'get-force'});}catch(e){}}if(navigator.serviceWorker&&navigator.serviceWorker.addEventListener){navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.type==='force-state'){window.__force=e.data.on;}});}})();
@@ -1037,7 +1040,7 @@ render=function(){
 
 render();  
 
-if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(e){showToast('SW fail: '+(e&&e.message?e.message:String(e)));});}else{showToast('Ο browser δεν υποστηρίζει serviceWorker');}</script>
 </body>
 
 </html>
