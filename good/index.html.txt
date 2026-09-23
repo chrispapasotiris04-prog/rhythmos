@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.18">
+<meta name="app-version" content="1.4.19">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -811,7 +811,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.18';
+var APP_VERSION='1.4.19';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -1055,6 +1055,136 @@ render=function(){
 render();  
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(e){showToast('SW fail: '+(e&&e.message?e.message:String(e)));});}else{showToast('Ο browser δεν υποστηρίζει serviceWorker');}</script>
+
+<script>
+/* ===== ΕΒΔΟΜΑΔΙΑΙΟ ΠΡΟΓΡΑΜΜΑ (Slots) - Βασικό CRUD ===== */
+state.schedule = state.schedule || { slots: [], status: {} };
+var scheduleCurDay = (new Date().getDay()+6)%7;
+
+function scheduleDayName(i){
+  return ['Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο','Κυριακή'][i];
+}
+
+function scheduleAllActivities(){
+  var list=[];
+  (state.courses||[]).forEach(function(c){
+    list.push({id:'course:'+c.id, name:c.name});
+  });
+  (typeof FIXED_DEFS!=='undefined'?FIXED_DEFS:[]).forEach(function(d){
+    list.push({id:'fixed:'+d.id, name:d.name});
+  });
+  return list;
+}
+
+function scheduleActivityOptions(sel){
+  return scheduleAllActivities().map(function(a){
+    return '<option value="'+a.id+'"'+(sel===a.id?' selected':'')+'>'+esc(a.name)+'</option>';
+  }).join('');
+}
+
+function scheduleActivityName(actId){
+  if(!actId) return '—';
+  var p=actId.split(':'), type=p[0], id=p.slice(1).join(':');
+  if(type==='course'){
+    var c=(state.courses||[]).find(function(x){return x.id===id;});
+    return c?c.name:'Μάθημα';
+  }
+  if(type==='fixed'){
+    var d=(typeof FIXED_DEFS!=='undefined'?FIXED_DEFS:[]).find(function(x){return x.id===id;});
+    return d?d.name:'Δραστηριότητα';
+  }
+  return actId;
+}
+
+function scheduleGetDay(day){
+  return state.schedule.slots.filter(function(s){return s.day===day;})
+    .sort(function(a,b){return a.start<b.start?-1:(a.start>b.start?1:0);});
+}
+
+function scheduleListHTML(day){
+  var slots=scheduleGetDay(day);
+  if(!slots.length) return '<p class="muted">Καμία θέση προγραμματισμένη για αυτή την ημέρα.</p>';
+  return slots.map(function(s){
+    return '<div class="list-row">'
+      +'<div class="list-left"><strong>'+esc(scheduleActivityName(s.activityId))+'</strong>'
+      +'<span class="muted">'+esc(s.start)+' – '+esc(s.end)+'</span></div>'
+      +'<button class="btn btn-ghost-danger" onclick="scheduleDel(\''+s.id+'\')">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+function scheduleOpen(day){
+  if(typeof day==='undefined') day=scheduleCurDay;
+  scheduleCurDay=day;
+  if(typeof closeModal==='function'){ try{closeModal();}catch(e){} }
+  var body='<div class="preset-row">';
+  for(var i=0;i<7;i++){
+    body+='<button class="preset" style="'+(i===day?'background:var(--primary);color:#fff;border-color:transparent':'')+'" onclick="scheduleOpen('+i+')">'+scheduleDayName(i).slice(0,3)+'</button>';
+  }
+  body+='</div>';
+  body+='<div style="margin:12px 0">'+scheduleListHTML(day)+'</div>';
+  body+='<div class="field"><label>Δραστηριότητα / Μάθημα</label>'
+    +'<select id="schAct">'+scheduleActivityOptions('')+'</select></div>';
+  body+='<div class="field" style="display:flex;gap:8px">'
+    +'<div style="flex:1"><label>Έναρξη</label><input type="time" id="schStart" value="09:00"></div>'
+    +'<div style="flex:1"><label>Λήξη</label><input type="time" id="schEnd" value="10:00"></div>'
+    +'</div>';
+  body+='<div class="actions"><button class="btn btn-primary" onclick="scheduleAdd()">Προσθήκη θέσης</button></div>';
+  openModal({title:'Πρόγραμμα — '+scheduleDayName(day), body:body, buttons:[{text:'Κλείσιμο'}]});
+}
+
+function scheduleAdd(){
+  var act=document.getElementById('schAct').value;
+  var st=document.getElementById('schStart').value;
+  var en=document.getElementById('schEnd').value;
+  if(!act){ showToast('Επίλεξε δραστηριότητα.'); return; }
+  if(!st||!en){ showToast('Συμπλήρωσε ώρες.'); return; }
+  if(st>=en){ showToast('Η λήξη πρέπει να είναι μετά την έναρξη.'); return; }
+  state.schedule.slots.push({
+    id:'sch'+Date.now()+'_'+Math.floor(Math.random()*10000),
+    day:scheduleCurDay,
+    start:st,
+    end:en,
+    activityId:act
+  });
+  saveState();
+  scheduleOpen(scheduleCurDay);
+  showToast('Προστέθηκε θέση.');
+}
+
+function scheduleDel(id){
+  state.schedule.slots=state.schedule.slots.filter(function(s){return s.id!==id;});
+  saveState();
+  scheduleOpen(scheduleCurDay);
+}
+
+function scheduleMount(){
+  var main=document.querySelector('main');
+  if(!main) return;
+  var active=document.querySelector('.nav-btn.active');
+  var label=active?active.textContent:'';
+  if(label.indexOf('Ημέρα')<0) return;
+  if(document.getElementById('schedule-card')) return;
+  var today=(new Date().getDay()+6)%7;
+  var count=scheduleGetDay(today).length;
+  main.insertAdjacentHTML('beforeend',
+    '<div id="schedule-card" class="card">'
+    +'<div class="row"><div><h3>Πρόγραμμα εβδομάδας</h3>'
+    +'<span class="muted">'+count+' θέσεις σήμερα</span></div>'
+    +'<button class="btn btn-primary" onclick="scheduleOpen()">Επεξεργασία</button></div>'
+    +'</div>');
+}
+
+var _renderSchedule=render;
+render=function(){
+  _renderSchedule();
+  setTimeout(scheduleMount,0);
+};
+saveState();
+render();
+/* ===== ΤΕΛΟΣ ΠΡΟΓΡΑΜΜΑΤΟΣ ===== */
+</script>
+
 </body>
 
 </html>
