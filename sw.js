@@ -46,7 +46,7 @@ function goodText(key,path,mime){
         +'<body style="font-family:system-ui;padding:2em;background:#1e1e2e;color:#fff">'
         +'<h2>Δεν βρέθηκε αποθηκευμένη έκδοση backup.</h2>'
         +'<p>Το αρχείο <code>good/index.html.txt</code> δεν υπάρχει στον server και δεν υπάρχει cached αντίγραφο.</p>'
-        +'<button onclick="navigator.serviceWorker.controller.postMessage({type:\'set-force\',on:false});setTimeout(function(){location.reload()},300)"'
+        +'<button onclick="if(navigator.serviceWorker&&navigator.serviceWorker.controller){navigator.serviceWorker.controller.postMessage({type:\'set-force\',on:false});}setTimeout(function(){location.reload()},300)"'
         +' style="padding:12px 24px;border:none;border-radius:14px;background:#6366f1;color:#fff;font-size:1rem;cursor:pointer">'
         +'Επιστροφή στη ζωντανή έκδοση</button></body></html>',
         {status:200,headers:{'Content-Type':'text/html; charset=utf-8'}}
