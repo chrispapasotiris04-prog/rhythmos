@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.20">
+<meta name="app-version" content="1.4.21">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -811,7 +811,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.20';
+var APP_VERSION='1.4.21';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -1057,187 +1057,145 @@ render();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(e){showToast('SW fail: '+(e&&e.message?e.message:String(e)));});}else{showToast('Ο browser δεν υποστηρίζει serviceWorker');}</script>
 
 <script>
-/* ===== ΕΒΔΟΜΑΔΙΑΙΟ ΠΡΟΓΡΑΜΜΑ (Slots) - Βασικό CRUD ===== */
+/* ===== ΕΒΔΟΜΑΔΙΑΙΟ ΠΡΟΓΡΑΜΜΑ (Slots) v2 ===== */
 state.schedule = state.schedule || { slots: [], status: {} };
 var scheduleCurDay = (new Date().getDay()+6)%7;
+var scheduleEditId = null;
+var scheduleSwapId = null;
 
 function scheduleDayName(i){
-  return ['Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο','Κυριακή'][i];
+return ['Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο','Κυριακή'][i];
 }
-
 function scheduleAllActivities(){
-  var list=[];
-  (state.courses||[]).forEach(function(c){
-    list.push({id:'course:'+c.id, name:c.name});
-  });
-  (typeof FIXED_DEFS!=='undefined'?FIXED_DEFS:[]).forEach(function(d){
-    list.push({id:'fixed:'+d.id, name:d.name});
-  });
-  return list;
+var list=[];
+(state.courses||[]).forEach(function(c){list.push({id:'course:'+c.id,name:c.name});});
+(typeof FIXED_DEFS!=='undefined'?FIXED_DEFS:[]).forEach(function(d){list.push({id:'fixed:'+d.id,name:d.name});});
+return list;
 }
-
 function scheduleActivityOptions(sel){
-  return scheduleAllActivities().map(function(a){
-    return '<option value="'+a.id+'"'+(sel===a.id?' selected':'')+'>'+esc(a.name)+'</option>';
-  }).join('');
+return scheduleAllActivities().map(function(a){return '<option value="'+a.id+'"'+(sel===a.id?' selected':'')+'>'+esc(a.name)+'</option>';}).join('');
 }
-
 function scheduleActivityName(actId){
-  if(!actId) return '—';
-  var p=actId.split(':'), type=p[0], id=p.slice(1).join(':');
-  if(type==='course'){
-    var c=(state.courses||[]).find(function(x){return x.id===id;});
-    return c?c.name:'Μάθημα';
-  }
-  if(type==='fixed'){
-    var d=(typeof FIXED_DEFS!=='undefined'?FIXED_DEFS:[]).find(function(x){return x.id===id;});
-    return d?d.name:'Δραστηριότητα';
-  }
-  return actId;
+if(!actId)return '—';
+var p=actId.split(':'),type=p[0],id=p.slice(1).join(':');
+if(type==='course'){var c=(state.courses||[]).find(function(x){return x.id===id;});return c?c.name:'Μάθημα';}
+if(type==='fixed'){var d=(typeof FIXED_DEFS!=='undefined'?FIXED_DEFS:[]).find(function(x){return x.id===id;});return d?d.name:'Δραστηριότητα';}
+return actId;
 }
-
 function scheduleGetDay(day){
-  return state.schedule.slots.filter(function(s){return s.day===day;})
-    .sort(function(a,b){return a.start<b.start?-1:(a.start>b.start?1:0);});
+return state.schedule.slots.filter(function(s){return s.day===day;}).sort(function(a,b){return a.start<b.start?-1:(a.start>b.start?1:0);});
 }
-
+function scheduleFind(id){return state.schedule.slots.find(function(s){return s.id===id;})||null;}
 function scheduleListHTML(day){
-  var slots=scheduleGetDay(day);
-  if(!slots.length) return '<p class="muted">Καμία θέση προγραμματισμένη για αυτή την ημέρα.</p>';
-  return slots.map(function(s){
-    return '<div class="list-row">'
-      +'<div class="list-left"><strong>'+esc(scheduleActivityName(s.activityId))+'</strong>'
-      +'<span class="muted">'+esc(s.start)+' – '+esc(s.end)+'</span></div>'
-      +'<button class="btn btn-ghost-danger" onclick="scheduleDel(\''+s.id+'\')">✕</button>'
-      +'</div>';
-  }).join('');
+var slots=scheduleGetDay(day);
+if(!slots.length)return '<p class="muted">Καμία θέση προγραμματισμένη για αυτή την ημέρα.</p>';
+return slots.map(function(s,idx){
+var swapOn=scheduleSwapId===s.id;
+return '<div class="plan-slot'+(swapOn?' overlap':'')+'">'
++'<div class="plan-slot-header"><strong>'+esc(scheduleActivityName(s.activityId))+'</strong><span class="muted">'+esc(s.start)+' – '+esc(s.end)+'</span></div>'
++'<div class="plan-slot-actions">'
++'<button onclick="scheduleEdit(\''+s.id+'\')">✎</button>'
++'<button onclick="scheduleMove(\''+s.id+'\',-1)"'+(idx===0?' disabled':'')+'>↑</button>'
++'<button onclick="scheduleMove(\''+s.id+'\',1)"'+(idx===slots.length-1?' disabled':'')+'>↓</button>'
++'<button onclick="scheduleSwapPick(\''+s.id+'\')">'+(swapOn?'Άκυρο':'⇄')+'</button>'
++'<button onclick="scheduleDel(\''+s.id+'\')">✕</button>'
++'</div></div>';
+}).join('');
 }
-
 function scheduleOpen(day){
-  if(typeof day==='undefined') day=scheduleCurDay;
-  scheduleCurDay=day;
-  if(typeof closeModal==='function'){ try{closeModal();}catch(e){} }
-  var body='<div class="preset-row">';
-  for(var i=0;i<7;i++){
-    body+='<button class="preset" style="'+(i===day?'background:var(--primary);color:#fff;border-color:transparent':'')+'" onclick="scheduleOpen('+i+')">'+scheduleDayName(i).slice(0,3)+'</button>';
-  }
-  body+='</div>';
-  body+='<div style="margin:12px 0">'+scheduleListHTML(day)+'</div>';
-  body+='<div class="field"><label>Δραστηριότητα / Μάθημα</label>'
-    +'<select id="schAct">'+scheduleActivityOptions('')+'</select></div>';
-  body+='<div class="field" style="display:flex;gap:8px">'
-    +'<div style="flex:1"><label>Έναρξη</label><input type="time" id="schStart" value="09:00"></div>'
-    +'<div style="flex:1"><label>Λήξη</label><input type="time" id="schEnd" value="10:00"></div>'
-    +'</div>';
-  body+='<div class="actions"><button class="btn btn-primary" onclick="scheduleAdd()">Προσθήκη θέσης</button></div>';
-  openModal({title:'Πρόγραμμα — '+scheduleDayName(day), body:body, buttons:[{text:'Κλείσιμο'}]});
+if(typeof day==='undefined')day=scheduleCurDay;
+scheduleCurDay=day;
+if(typeof closeModal==='function'){try{closeModal();}catch(e){}}
+var editing=scheduleEditId?scheduleFind(scheduleEditId):null;
+var body='<div class="preset-row">';
+for(var i=0;i<7;i++){body+='<button class="preset" style="'+(i===day?'background:var(--primary);color:#fff;border-color:transparent':'')+'" onclick="scheduleSetDay('+i+')">'+scheduleDayName(i).slice(0,3)+'</button>';}
+body+='</div>';
+body+='<div style="margin:12px 0">'+scheduleListHTML(day)+'</div>';
+if(scheduleSwapId)body+='<p class="note">Ανταλλαγή ενεργή: πάτα ⇄ σε άλλη θέση για ανταλλαγή δραστηριότητας, ή Άκυρο.</p>';
+body+='<div class="field"><label>Δραστηριότητα / Μάθημα</label><select id="schAct">'+scheduleActivityOptions(editing?editing.activityId:'')+'</select></div>';
+body+='<div class="field" style="display:flex;gap:8px"><div style="flex:1"><label>Έναρξη</label><input type="time" id="schStart" value="'+(editing?editing.start:'09:00')+'"></div><div style="flex:1"><label>Λήξη</label><input type="time" id="schEnd" value="'+(editing?editing.end:'10:00')+'"></div></div>';
+body+='<div class="actions"><button class="btn btn-primary" onclick="scheduleAdd()">'+(editing?'Αποθήκευση αλλαγών':'Προσθήκη θέσης')+'</button>'+(editing?'<button class="btn btn-ghost" onclick="scheduleCancelEdit()">Άκυρο</button>':'')+'</div>';
+openModal({title:'Πρόγραμμα — '+scheduleDayName(day),body:body,buttons:[{text:'Κλείσιμο'}]});
 }
-
-function scheduleAdd(){
-  var act=document.getElementById('schAct').value;
-  var st=document.getElementById('schStart').value;
-  var en=document.getElementById('schEnd').value;
-  if(!act){ showToast('Επίλεξε δραστηριότητα.'); return; }
-  if(!st||!en){ showToast('Συμπλήρωσε ώρες.'); return; }
-  if(st>=en){ showToast('Η λήξη πρέπει να είναι μετά την έναρξη.'); return; }
-  state.schedule.slots.push({
-    id:'sch'+Date.now()+'_'+Math.floor(Math.random()*10000),
-    day:scheduleCurDay,
-    start:st,
-    end:en,
-    activityId:act
-  });
-  saveState();
-  scheduleOpen(scheduleCurDay);
-  showToast('Προστέθηκε θέση.');
-}
-
-function scheduleDel(id){
-  state.schedule.slots=state.schedule.slots.filter(function(s){return s.id!==id;});
-  saveState();
-  scheduleOpen(scheduleCurDay);
-}
-
-function scheduleMount(){
-  var main=document.querySelector('main');
-  if(!main) return;
-  var active=document.querySelector('.nav-btn.active');
-  var label=active?active.textContent:'';
-  if(label.indexOf('Ημέρα')<0) return;
-  if(document.getElementById('schedule-card')) return;
-  var today=(new Date().getDay()+6)%7;
-  var count=scheduleGetDay(today).length;
-  main.insertAdjacentHTML('beforeend',
-    '<div id="schedule-card" class="card">'
-    +'<div class="row"><div><h3>Πρόγραμμα εβδομάδας</h3>'
-    +'<span class="muted">'+count+' θέσεις σήμερα</span></div>'
-    +'<button class="btn btn-primary" onclick="scheduleOpen()">Επεξεργασία</button></div>'
-    +'</div>');
-}
-
-var _renderSchedule=render;
-render=function(){
-  _renderSchedule();
-  setTimeout(scheduleMount,0);
-};
+function scheduleSetDay(i){scheduleEditId=null;scheduleSwapId=null;scheduleCurDay=i;scheduleOpen(i);}
+function scheduleOpenFresh(){scheduleEditId=null;scheduleSwapId=null;scheduleOpen(scheduleCurDay);}
+function scheduleEdit(id){scheduleEditId=id;scheduleSwapId=null;scheduleOpen(scheduleCurDay);}
+function scheduleCancelEdit(){scheduleEditId=null;scheduleOpen(scheduleCurDay);}
+function scheduleMove(id,dir){
+var slots=scheduleGetDay(scheduleCurDay);
+var idx=slots.findIndex(function(s){return s.id===id;});
+var j=idx+dir;
+if(idx<0||j<0||j>=slots.length)return;
+var a=slots[idx],b=slots[j];
+var tS=a.start,tE=a.end;
+a.start=b.start;a.end=b.end;
+b.start=tS;b.end=tE;
+scheduleEditId=null;scheduleSwapId=null;
 saveState();
-render();
-/* ===== ΤΕΛΟΣ ΠΡΟΓΡΑΜΜΑΤΟΣ ===== */
-</script>
-
-<script>
-/* ===== ΑΠΟΣΥΜΦΟΡΗΣΗ ΗΜΕΡΑΣ ===== */
-function weekPlanCardHTML(){
-var sleepMin=state.settings.sleepHours*60;
-var sleepWeek=sleepMin*7;
-var planned=plannedWeeklyMin();
-var freeWeek=10080-sleepWeek-planned;
-return '<div class="card"><h3>Εβδομαδιαίο πλάνο</h3><div class="stack-bar"><div style="width:'+sleepWeek/10080*100+'%;background:#c7d2fe"></div><div style="width:'+planned/10080*100+'%;background:linear-gradient(90deg,#6366f1,#8b5cf6)"></div><div style="width:'+Math.max(0,freeWeek)/10080*100+'%;background:linear-gradient(90deg,#34d399,#10b981)"></div></div>'
-+'<div class="plan-row"><span><span class="dot" style="background:#c7d2fe"></span>Ύπνος</span><strong>'+fmtHM(sleepWeek)+'</strong></div>'
-+'<div class="plan-row"><span><span class="dot" style="background:#6366f1"></span>Δραστηριότητες</span><strong>'+fmtHM(planned)+'</strong></div>'
-+'<div class="plan-row"><span><span class="dot" style="background:#10b981"></span>Ελεύθερος</span><strong class="'+(freeWeek<0?'text-danger':'text-success')+'">'+fmtHM(freeWeek)+'</strong></div></div>';
+scheduleOpen(scheduleCurDay);
 }
-function monthlyCardHTML(){
-ensureMonth();
-var selMonth=selectedMonthlyMin();
-var monthFree=monthlyFreeMin();
-return '<div class="card"><h3>Μηνιαίες επιλογές</h3><div class="summary-grid"><div class="stat-box"><span>Επιλεγμένες</span><strong>'+fmtHM(selMonth)+'</strong></div><div class="stat-box"><span>Διαθέσιμο</span><strong class="'+(monthFree<0?'text-danger':'text-success')+'">'+fmtHM(monthFree)+'</strong></div></div>'
-+'<div class="choice-grid">'+MONTHLY_DEFS.map(function(item){var checked=!!state.monthly.items[item.id];return '<button class="choice '+(checked?'on':'')+'" onclick="toggleMonthly(\''+item.id+'\')"><span><strong>'+esc(item.name)+'</strong><small>'+fmtHM(item.hours*60)+'</small></span><span class="switch '+(checked?'on':'')+'" style="pointer-events:none"></span></button>';}).join('')+'</div></div>';
+function scheduleSwapPick(id){
+if(scheduleSwapId===id){scheduleSwapId=null;}
+else if(scheduleSwapId){
+var a=scheduleFind(scheduleSwapId),b=scheduleFind(id);
+if(a&&b){var t=a.activityId;a.activityId=b.activityId;b.activityId=t;showToast('Έγινε ανταλλαγή.');}
+scheduleSwapId=null;
+}else{scheduleSwapId=id;}
+scheduleEditId=null;
+saveState();
+scheduleOpen(scheduleCurDay);
 }
-function declutterMount(){
+function scheduleAdd(){
+var act=document.getElementById('schAct').value;
+var st=document.getElementById('schStart').value;
+var en=document.getElementById('schEnd').value;
+if(!act){showToast('Επίλεξε δραστηριότητα.');return;}
+if(!st||!en){showToast('Συμπλήρωσε ώρες.');return;}
+if(st>=en){showToast('Η λήξη πρέπει να είναι μετά την έναρξη.');return;}
+if(scheduleEditId){
+var s=scheduleFind(scheduleEditId);
+if(s){s.activityId=act;s.start=st;s.end=en;}
+scheduleEditId=null;
+showToast('Η θέση ενημερώθηκε.');
+}else{
+state.schedule.slots.push({id:'sch'+Date.now()+'_'+Math.floor(Math.random()*10000),day:scheduleCurDay,start:st,end:en,activityId:act});
+showToast('Προστέθηκε θέση.');
+}
+saveState();
+scheduleOpen(scheduleCurDay);
+}
+function scheduleDel(id){
+state.schedule.slots=state.schedule.slots.filter(function(s){return s.id!==id;});
+if(scheduleEditId===id)scheduleEditId=null;
+if(scheduleSwapId===id)scheduleSwapId=null;
+saveState();
+scheduleOpen(scheduleCurDay);
+}
+function scheduleMount(){
 var main=document.querySelector('main');
 if(!main)return;
 var active=document.querySelector('.nav-btn.active');
 var label=active?active.textContent:'';
-if(label.indexOf('Ημέρα')>=0){
-main.querySelectorAll('.card h3').forEach(function(h){
-var t=h.textContent.trim();
-if(t==='Εβδομαδιαίο πλάνο'||t==='Μηνιαίες επιλογές'||t==='Υπόλοιπα σταθερών'){
-var c=h.closest('.card');
-if(c)c.remove();
+if(label.indexOf('Ημέρα')<0)return;
+if(document.getElementById('schedule-card'))return;
+var today=(new Date().getDay()+6)%7;
+var count=scheduleGetDay(today).length;
+main.insertAdjacentHTML('beforeend',
+'<div id="schedule-card" class="card">'
++'<div class="row"><div><h3>Πρόγραμμα εβδομάδας</h3>'
++'<span class="muted">'+count+' θέσεις σήμερα</span></div>'
++'<button class="btn btn-primary" onclick="scheduleOpenFresh()">Επεξεργασία</button></div>'
++'</div>');
 }
-});
-}
-if(label.indexOf('Ανάλυση')>=0){
-if(!document.getElementById('weekplan-extra')){
-main.insertAdjacentHTML('afterbegin','<div id="weekplan-extra">'+weekPlanCardHTML()+'</div>');
-}
-}
-if(label.indexOf('Δραστηριότητες')>=0){
-if(!document.getElementById('monthly-extra')){
-main.insertAdjacentHTML('beforeend','<div id="monthly-extra">'+monthlyCardHTML()+'</div>');
-}
-}
-}
-var _renderDeclutter=render;
+var _renderSchedule2=render;
 render=function(){
-_renderDeclutter();
-declutterMount();
+_renderSchedule2();
+setTimeout(scheduleMount,0);
 };
+saveState();
 render();
-/* ===== ΤΕΛΟΣ ΑΠΟΣΥΜΦΟΡΗΣΗΣ ===== */
+/* ===== ΤΕΛΟΣ ΠΡΟΓΡΑΜΜΑΤΟΣ v2 ===== */
 </script>
-
   
 </body>
 
