@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.22">
+<meta name="app-version" content="1.4.23">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -811,7 +811,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.22';
+var APP_VERSION='1.4.23';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -1065,7 +1065,8 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch
 </style>
   
 <script>
-/* ===== ΕΒΔΟΜΑΔΙΑΙΟ ΠΡΟΓΡΑΜΜΑ (Slots) v3 + ΑΠΟΣΥΜΦΟΡΗΣΗ ===== */
+/* ===== ΕΒΔΟΜΑΔΙΑΙΟ ΠΡΟΓΡΑΜΜΑ (Slots) v4 + ΑΠΟΣΥΜΦΟΡΗΣΗ ===== */
+(function(){var st=document.getElementById('schCss');if(!st){st=document.createElement('style');st.id='schCss';st.textContent='.sch-draggable{touch-action:pan-y;user-select:none;-webkit-user-select:none;position:relative}.sch-draggable.sch-dragging{opacity:.35}.sch-ghost-float{position:fixed;z-index:320;pointer-events:none;margin:0;opacity:.95;transform:none;box-shadow:0 18px 44px rgba(20,25,60,.4);border-radius:18px}.sch-drop-indicator{height:52px;border:2px dashed var(--primary);background:rgba(99,102,241,.08);border-radius:18px;margin:0 0 10px}';document.head.appendChild(st);}})();
 state.schedule = state.schedule || { slots: [], status: {} };
 var scheduleCurDay = (new Date().getDay()+6)%7;
 var scheduleEditId = null;
@@ -1119,7 +1120,7 @@ var body='<div class="preset-row">';
 for(var i=0;i<7;i++){body+='<button class="preset" style="'+(i===day?'background:var(--primary);color:#fff;border-color:transparent':'')+'" onclick="scheduleSetDay('+i+')">'+scheduleDayName(i).slice(0,3)+'</button>';}
 body+='</div>';
 body+='<div style="margin:12px 0" id="schListWrap">'+scheduleListHTML(day)+'</div>';
-body+='<p class="note">Κράτα πατημένο μια θέση και σύρτηκα: ο διακεκομμένος χώρος δείχνει πού θα μπει.</p>';
+body+='<p class="note">Κράτα πατημένη μια θέση μισό δευτερόλεπτο και σύρε μόνο κατακόρυφα. Ο διακεκομμένος χώρος δείχνει πού θα μπει.</p>';
 body+='<div class="field"><label>Δραστηριότητα / Μάθημα</label><select id="schAct">'+scheduleActivityOptions(editing?editing.activityId:'')+'</select></div>';
 body+='<div class="field" style="display:flex;gap:8px"><div style="flex:1"><label>Έναρξη</label><input type="time" id="schStart" value="'+(editing?editing.start:'09:00')+'"></div><div style="flex:1"><label>Λήξη</label><input type="time" id="schEnd" value="'+(editing?editing.end:'10:00')+'"></div></div>';
 body+='<div class="actions"><button class="btn btn-primary" onclick="scheduleAdd()">'+(editing?'Αποθήκευση αλλαγών':'Προσθήκη θέσης')+'</button>'+(editing?'<button class="btn btn-ghost" onclick="scheduleCancelEdit()">Άκυρο</button>':'')+'</div>';
@@ -1132,33 +1133,45 @@ el.addEventListener('pointerdown',schDown);
 el.addEventListener('contextmenu',function(ev){if(schDrag)ev.preventDefault();});
 });
 }
+function scheduleRefreshList(){
+var wrap=document.getElementById('schListWrap');
+if(!wrap){scheduleOpen(scheduleCurDay);return;}
+wrap.innerHTML=scheduleListHTML(scheduleCurDay);
+scheduleBindDrag();
+}
 
+function schListeners(d,off){
+var fn=off?'removeEventListener':'addEventListener';
+window[fn]('pointermove',d.onMove);
+window[fn]('pointerup',d.onUp);
+window[fn]('pointercancel',d.onCancel);
+document[fn]('touchmove',d.onTouchMove,{passive:false});
+}
 function schDown(e){
 if(schDrag)return;
 if(e.target.closest('button'))return;
 var el=e.currentTarget;
-var d={id:el.dataset.schId,el:el,x0:e.clientX,y0:e.clientY,lastX:e.clientX,lastY:e.clientY,started:false,index:null,clone:null,ind:null,sheet:null,prevOverflow:''};
-d.timer=setTimeout(function(){schStart(d);},280);
-d.movePre=function(ev){
+var d={id:el.dataset.schId,el:el,x0:e.clientX,y0:e.clientY,lastX:e.clientX,lastY:e.clientY,started:false,index:null,from:null,clone:null,ind:null,sheet:null,h:0,left:0,offY:0,raf:0,timer:0};
+d.onMove=function(ev){
 d.lastX=ev.clientX;d.lastY=ev.clientY;
 if(!d.started){
-if(Math.abs(ev.clientX-d.x0)+Math.abs(ev.clientY-d.y0)>10)schCancel(d);
-}else{
-schMove(d,ev);
+if(Math.abs(ev.clientX-d.x0)+Math.abs(ev.clientY-d.y0)>12)schCancel(d);
 }
 };
-d.up=function(ev){schUp(d,ev);};
-window.addEventListener('pointermove',d.movePre,{passive:false});
-window.addEventListener('pointerup',d.up);
-window.addEventListener('pointercancel',d.up);
+d.onUp=function(ev){schUp(d,ev);};
+d.onCancel=function(ev){if(d.started){schUp(d,ev);}else{schCancel(d);}};
+d.onTouchMove=function(ev){if(d.started&&ev.cancelable)ev.preventDefault();};
+d.timer=setTimeout(function(){schStart(d);},300);
+schListeners(d,false);
 schDrag=d;
 }
 function schStart(d){
 d.started=true;
-d.el.classList.add('sch-lift');
 var r=d.el.getBoundingClientRect();
 d.offY=d.lastY-r.top;
-d.w=r.width;
+d.h=r.height;
+d.left=r.left;
+d.from=scheduleGetDay(scheduleCurDay).findIndex(function(s){return s.id===d.id;});
 d.clone=d.el.cloneNode(true);
 d.clone.className=d.el.className+' sch-ghost-float';
 d.clone.style.width=r.width+'px';
@@ -1168,38 +1181,55 @@ document.body.appendChild(d.clone);
 d.el.classList.add('sch-dragging');
 d.ind=document.createElement('div');
 d.ind.className='sch-drop-indicator';
-d.el.parentNode.insertBefore(d.ind,d.el);
-var sheet=document.querySelector('#modalOverlay .sheet');
-if(sheet){d.sheet=sheet;d.prevOverflow=sheet.style.overflow;sheet.style.overflow='hidden';}
-schMove(d,{clientX:d.lastX,clientY:d.lastY,preventDefault:function(){}});
+d.sheet=document.querySelector('#modalOverlay .sheet');
+schMove(d,d.lastY);
+var loop=function(){if(!schDrag||schDrag!==d)return;schEdgeScroll(d);d.raf=requestAnimationFrame(loop);};
+d.raf=requestAnimationFrame(loop);
 }
-function schMove(d,ev){
+function schMove(d,y){
 if(!d.started)return;
-if(ev.preventDefault)ev.preventDefault();
-d.clone.style.left=(ev.clientX-d.w/2)+'px';
-d.clone.style.top=(ev.clientY-d.offY)+'px';
+d.clone.style.top=Math.max(4,Math.min(window.innerHeight-d.h-4,y-d.offY))+'px';
 var rows=Array.prototype.slice.call(document.querySelectorAll('#modalOverlay .sch-draggable'));
 if(!rows.length)return;
 var idx=rows.length;
 for(var i=0;i<rows.length;i++){
-var r=rows[i].getBoundingClientRect();
-if(ev.clientY<r.top+r.height/2){idx=i;break;}
+var rr=rows[i].getBoundingClientRect();
+if(y<rr.top+rr.height/2){idx=i;break;}
 }
+var to=idx>d.from?idx-1:idx;
+if(to===d.from){
+if(d.ind.parentNode)d.ind.parentNode.removeChild(d.ind);
+d.index=null;
+}else{
+d.index=idx;
 var parent=rows[0].parentNode;
 if(idx<rows.length)parent.insertBefore(d.ind,rows[idx]);else parent.appendChild(d.ind);
-d.index=idx;
+}
+}
+function schEdgeScroll(d){
+if(!d.sheet)return;
+var r=d.sheet.getBoundingClientRect();
+var zone=64;
+var y=d.lastY;
+var v=0;
+if(y<r.top+zone)v=-Math.ceil((r.top+zone-y)/zone*14);
+else if(y>r.bottom-zone)v=Math.ceil((y-(r.bottom-zone))/zone*14);
+if(v){
+d.sheet.scrollTop+=v;
+d.lastY=Math.max(r.top+2,Math.min(r.bottom-2,d.lastY+v));
+schMove(d,d.lastY);
+}
 }
 function schUp(d,ev){
-window.removeEventListener('pointermove',d.movePre);
-window.removeEventListener('pointerup',d.up);
-window.removeEventListener('pointercancel',d.up);
+schListeners(d,true);
 clearTimeout(d.timer);
+cancelAnimationFrame(d.raf);
 if(!d.started){schDrag=null;return;}
 var sorted=scheduleGetDay(scheduleCurDay);
-var from=sorted.findIndex(function(s){return s.id===d.id;});
-var to=d.index==null?from:d.index;
-if(to>from)to=to-1;
-if(from>=0&&to>=0&&to!==from){
+var from=d.from;
+var to=null;
+if(d.index!=null){to=d.index>from?d.index-1:d.index;if(to===from)to=null;}
+if(from>=0&&to!=null&&to!==from&&to>=0&&to<sorted.length){
 var times=sorted.map(function(s){return {start:s.start,end:s.end};});
 var moved=sorted.splice(from,1)[0];
 sorted.splice(to,0,moved);
@@ -1208,17 +1238,15 @@ saveState();
 showToast('Η θέση μετακινήθηκε.');
 }
 if(d.clone)d.clone.remove();
-if(d.ind)d.ind.remove();
-d.el.classList.remove('sch-dragging','sch-lift');
-if(d.sheet)d.sheet.style.overflow=d.prevOverflow||'';
+if(d.ind&&d.ind.parentNode)d.ind.parentNode.removeChild(d.ind);
+d.el.classList.remove('sch-dragging');
 schDrag=null;
-scheduleOpen(scheduleCurDay);
+scheduleRefreshList();
 }
 function schCancel(d){
 clearTimeout(d.timer);
-window.removeEventListener('pointermove',d.movePre);
-window.removeEventListener('pointerup',d.up);
-window.removeEventListener('pointercancel',d.up);
+cancelAnimationFrame(d.raf);
+schListeners(d,true);
 if(schDrag===d)schDrag=null;
 }
 
@@ -1237,7 +1265,7 @@ a.start=b.start;a.end=b.end;
 b.start=tS;b.end=tE;
 scheduleEditId=null;
 saveState();
-scheduleOpen(scheduleCurDay);
+scheduleRefreshList();
 }
 function scheduleAdd(){
 var act=document.getElementById('schAct').value;
@@ -1262,7 +1290,7 @@ function scheduleDel(id){
 state.schedule.slots=state.schedule.slots.filter(function(s){return s.id!==id;});
 if(scheduleEditId===id)scheduleEditId=null;
 saveState();
-scheduleOpen(scheduleCurDay);
+scheduleRefreshList();
 }
 function scheduleMount(){
 var main=document.querySelector('main');
@@ -1281,7 +1309,7 @@ main.insertAdjacentHTML('beforeend',
 +'</div>');
 }
 
-/* ===== ΑΠΟΣΥΜΦΟΡΗΣΗ ΗΜΕΡΑΣ (ενσωματωμένη στο v3) ===== */
+/* ===== ΑΠΟΣΥΜΦΟΡΗΣΗ ΗΜΕΡΑΣ (ενσωματωμένη στο v4) ===== */
 function weekPlanCardHTML(){
 var sleepMin=state.settings.sleepHours*60;
 var sleepWeek=sleepMin*7;
@@ -1325,16 +1353,15 @@ main.insertAdjacentHTML('beforeend','<div id="monthly-extra">'+monthlyCardHTML()
 }
 }
 
-var _renderSchedule3=render;
+var _renderSchedule4=render;
 render=function(){
-_renderSchedule3();
+_renderSchedule4();
 declutterMount();
 setTimeout(scheduleMount,0);
 };
 saveState();
 render();
-/* ===== ΤΕΛΟΣ ΠΡΟΓΡΑΜΜΑΤΟΣ v3 ===== */
-</script>
+/* ===== ΤΕΛΟΣ ΠΡΟΓΡΑΜΜΑΤΟΣ v4 ===== */
   
 </body>
 
