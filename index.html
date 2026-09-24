@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#6366f1">
-<meta name="app-version" content="1.4.25">
+<meta name="app-version" content="1.4.26">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-500.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/greek-700.css">
@@ -426,7 +426,7 @@ function relaxBaseDaily(){const d=FIXED_DEFS.find(x=>x.id==='relax');return d?d.
 function relaxDouble(){return relaxBaseDaily()*2;}
 function relaxOversUsed(includeToday){const base=relaxBaseDaily();const ws=startOfWeek();const today=startOfDay();let count=0;for(let i=0;i<7;i++){const d=new Date(ws);d.setDate(d.getDate()+i);const ds=d.getTime();if(ds>today)continue;if(includeToday===false&&ds>=today)continue;const m=totalMin('fixed','relax',ds,startOfNextDay(ds));if(m>base+0.5)count++;}return count;}
 function fixedInfo(id){const def=FIXED_DEFS.find(d=>d.id===id);if(!def)return null;const dayMin=totalMin('fixed',id,startOfDay(),startOfNextDay());const weekMin=totalMin('fixed',id,startOfWeek(),startOfNextWeek());const occ=occurrences('fixed',id,startOfWeek(),startOfNextWeek());let dailyCap=def.daily,weeklyCap=def.weekly,hardLimit=Infinity,extra={};if(id==='relax'){const base=relaxBaseDaily();const allowed=state.settings.relaxOvers;const oversBefore=relaxOversUsed(false);const oversDisplay=relaxOversUsed(true);const canOver=oversBefore<allowed;dailyCap=base;weeklyCap=def.weekly;hardLimit=canOver?base*2:base;extra={base,double:base*2,overs:oversDisplay,oversBefore,allowed,canOver,weeklyMax:def.weekly+allowed*base};}else if(def.hard){hardLimit=dailyCap;}return {def,dayMin,weekMin,occ,dailyCap,weeklyCap,hardLimit,dayRemaining:dailyCap-dayMin,dayOver:Math.max(0,dayMin-dailyCap),weekRemaining:weeklyCap-weekMin,weekOver:Math.max(0,weekMin-weeklyCap),target:def.target,...extra};}
-function courseInfo(c){const dayMin=totalMin('course',c.id,startOfDay(),startOfNextDay());const weekMin=totalMin('course',c.id,startOfWeek(),startOfNextWeek());const targetMin=(c.hours||0)*60;const off=Array.isArray(c.off)?c.off:[];const activeDays=Math.max(1,7-off.length);const dailyTarget=targetMin/activeDays;const today=mondayIndex();const isOff=off.includes(today);let remActive=0;for(let i=today;i<7;i++)if(!off.includes(i))remActive++;const remaining=Math.max(0,targetMin-weekMin);const todayTarget=(!isOff&&remActive>0&&remaining>0)?Math.min(dailyTarget,remaining/remActive):0;return {course:c,dayMin,weekMin,targetMin,remaining,dailyTarget,todayTarget,isOff,off,activeDays,remActive};}
+function courseInfo(c){const dayMin=totalMin('course',c.id,startOfDay(),startOfNextDay());const weekMin=totalMin('course',c.id,startOfWeek(),startOfNextWeek());const targetMin=(c.hours||0)*60;const placed=(typeof schedulePlacedDays==='function')?schedulePlacedDays(c.id):null;const off=(placed&&placed.length>0)?[0,1,2,3,4,5,6].filter(d=>!placed.includes(d)):(Array.isArray(c.off)?c.off:[]);const activeDays=Math.max(1,7-off.length);const dailyTarget=targetMin/activeDays;const today=mondayIndex();const isOff=off.includes(today);let remActive=0;for(let i=today;i<7;i++)if(!off.includes(i))remActive++;const remaining=Math.max(0,targetMin-weekMin);const todayTarget=(!isOff&&remActive>0&&remaining>0)?Math.min(dailyTarget,remaining/remActive):0;return {course:c,dayMin,weekMin,targetMin,remaining,dailyTarget,todayTarget,isOff,off,activeDays,remActive,placed:placed?placed.length:0};}
 function budgetSnapshot(courses,fixedDefs,sleepHours){const sleepW=sleepHours*7*60;const fixedW=fixedDefs.reduce((s,d)=>s+d.weekly,0);const courseW=courses.filter(c=>c.active&&c.hours>0).reduce((s,c)=>s+c.hours*60,0);const weekRem=10080-sleepW-fixedW-courseW;const fixedDay=fixedW/7;const loads=[0,0,0,0,0,0,0];courses.forEach(c=>{if(!c.active||!c.hours)return;const off=Array.isArray(c.off)?c.off:[];const activeDays=Math.max(1,7-off.length);const per=c.hours*60/activeDays;for(let d=0;d<7;d++)if(!off.includes(d))loads[d]+=per;});const days=loads.map(l=>1440-sleepHours*60-fixedDay-l);return {weekRem,days};}
 function budgetPanelHTML(snap){const cls=v=>v>0.5?'text-success':(v<-0.5?'text-danger':'');const cells=snap.days.map((v,i)=>`<span class="day-chip" style="${v<-0.5?'background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;border-color:transparent':''}">${DAY_SHORT[i]} <b class="${cls(v)}">${fmtHM(v)}</b></span>`).join('');return `<p class="note" style="margin:0 0 8px">Υπόλοιπο 24ώρων ανά ημέρα και εβδομάδας. Πράσινο περισσεύει, γκρι ακριβώς, κόκκινο ξεπερνάς.</p><div class="day-chips">${cells}</div><div class="plan-row"><span>Εβδομάδα</span><strong class="${cls(snap.weekRem)}">${fmtHM(snap.weekRem)}</strong></div>`;}
 function budgetBad(snap){return snap.weekRem<-0.5||snap.days.some(v=>v<-0.5);}
@@ -716,7 +716,7 @@ function renderSettings(){
   <div class="card"><div class="setting-row"><div><strong>Ειδοποιήσεις</strong><span class="muted">Pop-up όταν ανοιχτή.</span></div><button class="switch ${state.settings.notifications?'on':''}" onclick="toggleNotifications()"></button></div>
     <div class="setting-row"><div><strong>Ήχος</strong><span class="muted">Στις προειδοποιήσεις.</span></div><button class="switch ${state.settings.sound?'on':''}" onclick="toggleSetting('sound')"></button></div></div>
   <div class="section-title">Εβδομάδα</div>
-<div class="card"><h3>Πλάνο 24 ωρών</h3>${budgetPanelHTML(budgetSnapshot(state.courses,FIXED_DEFS,state.settings.sleepHours))}</div>
+<div class="card"><h3><div class="card"><h3>Πλάνο 24 ωρών</h3>${budgetPanelHTML((typeof budgetSnapshotExact==='function'?budgetSnapshotExact:budgetSnapshot)(state.courses,FIXED_DEFS,state.settings.sleepHours))}</div>
   <div class="card"><div class="plan-row"><span>Σύνολο</span><strong>168ω</strong></div><div class="plan-row"><span>Ύπνος</span><strong>${fmtHM(sleepWeek)}</strong></div><div class="plan-row"><span>Δραστηριότητες</span><strong>${fmtHM(planned)}</strong></div><div class="plan-row"><span>Ελεύθερος</span><strong class="${freeWeek<0?'text-danger':'text-success'}">${fmtHM(freeWeek)}</strong></div></div>
   <div class="section-title">Ασφάλεια</div>
 <div class="card"><div class="setting-row"><div><strong>Πίνακας ασφαλούς λειτουργίας</strong><span class="muted">Επαναφορά στο backup, επιστροφή στην τελευταία έκδοση, εξαγωγή δεδομένων.</span></div><button class="btn btn-ghost" onclick="safeSettings()">Άνοιγμα</button></div></div>
@@ -811,7 +811,7 @@ function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('s
 function showOnboarding(){if(state.onboardingComplete)return;const steps=[{icon:'⏱',title:'Καλώς ήρθες στον Ρυθμό',text:'Χρονοδιαχείριση για φοιτητές: όρια, στόχοι, pomodoro και στατιστικά, όλα σε ένα μέρος.'},{icon:'🧭',title:'Πέντε καρτέλες',text:'Ημέρα: overview, πλάνο, προτάσεις. Δραστηριότητες: χρονόμετρα και μαθήματα. Πρόγραμμα: timeline και φορτίο. Ανάλυση: στατιστικά. Ρυθμίσεις.'},{icon:'🍅',title:'Pomodoro με καταγραφή',text:'Ξεκίνα κύκλο, διάλεξε μάθημα, και ο χρόνος καταγράφεται αυτόματα εκεί. Ρύθμισε focus και διάλειμμα όπως θες.'}];let cur=0;const ov=document.createElement('div');ov.className='onboarding-overlay';function rs(){const s=steps[cur];ov.innerHTML=`<div class="onboarding-step"><div class="onboarding-icon">${s.icon}</div><h2>${s.title}</h2><p>${s.text}</p><div class="onboarding-dots">${steps.map((_,i)=>`<div class="onboarding-dot ${i===cur?'active':''}"></div>`).join('')}</div><div class="onboarding-actions">${cur>0?`<button class="btn btn-ghost" onclick="prevOb()">Πίσω</button>`:`<button class="btn btn-ghost" onclick="skipOb()">Παράλειψη</button>`}<button class="btn btn-primary" onclick="${cur===steps.length-1?'doneOb()':'nextOb()'}">${cur===steps.length-1?'Ξεκίνα':'Συνέχεια'}</button></div>`;}window.nextOb=()=>{cur++;rs();};window.prevOb=()=>{cur--;rs();};window.skipOb=()=>doneOb();window.doneOb=()=>{state.onboardingComplete=true;saveState();ov.remove();showToast('Καλώς ήρθες!');};document.body.appendChild(ov);rs();}
 function resetOnboarding(){state.onboardingComplete=false;saveState();showOnboarding();}
 
-var APP_VERSION='1.4.25';
+var APP_VERSION='1.4.26';
 var netGranted=false;
 function checkForUpdate(){
   if(netGranted)return;
@@ -1375,6 +1375,70 @@ saveState();
 render();
 /* ===== ΤΕΛΟΣ ΠΡΟΓΡΑΜΜΑΤΟΣ v5 ===== */
 </script>
+
+<script>
+/* ===== ΠΡΟΓΡΑΜΜΑ v6: ΡΕΠΟ ΑΠΟ ΘΕΣΕΙΣ + ΑΚΡΙΒΕΣ 24ΩΡΟ ===== */
+function schedulePlacedDays(courseId){
+var days=[];
+(state.schedule&&state.schedule.slots||[]).forEach(function(s){
+if(s.activityId==='course:'+courseId&&days.indexOf(s.day)<0)days.push(s.day);
+});
+return days;
+}
+function scheduleDayMinutes(day){
+var m=0;
+(state.schedule&&state.schedule.slots||[]).forEach(function(s){
+if(s.day===day){
+var t=String(s.start).split(':').map(Number),e=String(s.end).split(':').map(Number);
+m+=(e[0]*60+e[1])-(t[0]*60+t[1]);
+}
+});
+return m;
+}
+function scheduleSlotCount(){return (state.schedule&&state.schedule.slots||[]).length;}
+function budgetSnapshotExact(courses,fixedDefs,sleepHours){
+var sleepW=sleepHours*7*60;
+var fixedW=fixedDefs.reduce(function(s,d){return s+d.weekly;},0);
+var courseW=courses.filter(function(c){return c.active&&c.hours>0;}).reduce(function(s,c){return s+c.hours*60;},0);
+var weekRem=10080-sleepW-fixedW-courseW;
+var days;
+if(scheduleSlotCount()>0){
+days=[0,1,2,3,4,5,6].map(function(d){return 1440-sleepHours*60-scheduleDayMinutes(d);});
+}else{
+var fixedDay=fixedW/7;var loads=[0,0,0,0,0,0,0];
+courses.forEach(function(c){if(!c.active||!c.hours)return;var off=Array.isArray(c.off)?c.off:[];var activeDays=Math.max(1,7-off.length);var per=c.hours*60/activeDays;for(var d=0;d<7;d++)if(off.indexOf(d)<0)loads[d]+=per;});
+days=loads.map(function(l){return 1440-sleepHours*60-fixedDay-l;});
+}
+return {weekRem:weekRem,days:days};
+}
+function unplacedBadgesMount(){
+var main=document.querySelector('main');
+if(!main)return;
+var active=document.querySelector('.nav-btn.active');
+var label=active?active.textContent:'';
+if(label.indexOf('Δραστηριότητες')<0)return;
+state.courses.forEach(function(c){
+if(!c.active||!c.hours)return;
+if(schedulePlacedDays(c.id).length>0)return;
+main.querySelectorAll('article.card').forEach(function(card){
+var h=card.querySelector('.activity-title h3');
+if(!h||h.textContent.trim()!==c.name)return;
+if(card.querySelector('.unplaced-badge'))return;
+var t=card.querySelector('.activity-title');
+if(t)t.insertAdjacentHTML('beforeend',' <span class="badge warn unplaced-badge">Ατοποθέτητο</span>');
+});
+});
+}
+var _renderSchedule6=render;
+render=function(){
+_renderSchedule6();
+setTimeout(unplacedBadgesMount,0);
+};
+saveState();
+render();
+/* ===== ΤΕΛΟΣ ΠΡΟΓΡΑΜΜΑΤΟΣ v6 ===== */
+</script>
+
   
 </body>
 
